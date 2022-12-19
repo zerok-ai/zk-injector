@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"time"
 
-	m "github.com/alex-leonhardt/k8s-mutate-webhook/pkg/mutate"
+	m "github.com/zerok-ai/zerok-injector/pkg/mutate"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -158,6 +158,11 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 						APIVersions: []string{"v1"},
 						Resources:   []string{"pods"},
 					},
+				},
+			},
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"zk-injection": "enabled",
 				},
 			},
 			FailurePolicy: &fail,

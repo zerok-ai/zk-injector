@@ -4,11 +4,11 @@ ENV CGO_ENABLED 0
 
 RUN apk add make
 
-WORKDIR /go/src/github.com/zerok-ai/zk-injector
+WORKDIR /go/src/zk-injector
 ADD . .
 RUN make app
 
 FROM alpine
 WORKDIR /app
-COPY --from=build /go/src/github.com/zerok-ai/zk-injector/zk-injector .
+COPY --from=build /go/src/zk-injector/zk-injector .
 CMD ["/app/zk-injector"]
