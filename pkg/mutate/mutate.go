@@ -59,7 +59,7 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 			patch := map[string]string{
 				"op":    "replace",
 				"path":  fmt.Sprintf("/spec/containers/%d/name", i),
-				"value": name + "zk-inject",
+				"value": name + "-zk-inject",
 			}
 			p = append(p, patch)
 		}
