@@ -1,7 +1,7 @@
 NAME = zk-injector
 IMAGE_PREFIX = rajeevzerok
 IMAGE_NAME = zk-injector
-IMAGE_VERSION = 0.5
+IMAGE_VERSION = 0.6
 
 export GO111MODULE=on
 

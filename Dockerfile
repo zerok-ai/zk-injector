@@ -2,6 +2,8 @@ FROM golang:1.19.1-alpine3.16 AS build
 ENV GO111MODULE on
 ENV CGO_ENABLED 0
 
+RUN apk add make
+
 WORKDIR /go/src/github.com/zerok-ai/zk-injector
 ADD . .
 RUN make app

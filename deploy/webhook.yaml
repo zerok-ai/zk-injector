@@ -35,7 +35,7 @@ spec:
       serviceAccountName: zk-injector
       containers:
         - name: zk-injector
-          image: rajeevzerok/zk-injector:0.5
+          image: rajeevzerok/zk-injector:0.6
           imagePullPolicy: Always
           resources:
             limits:
