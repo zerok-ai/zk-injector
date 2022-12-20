@@ -219,17 +219,17 @@ func generateCert(orgs, dnsNames []string, commonName string) (*bytes.Buffer, *b
 		Bytes: caBytes,
 	})
 
-	newCertPEM, newPrivateKeyPEM, err := getClientCertPEM(orgs, dnsNames, commonName, ca, caPrivateKey)
+	serverCertPEM, serverPrivateKeyPEM, err := getServerCertPEM(orgs, dnsNames, commonName, ca, caPrivateKey)
 
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return caPEM, newCertPEM, newPrivateKeyPEM, nil
+	return caPEM, serverCertPEM, serverPrivateKeyPEM, nil
 }
 
-func getClientCertPEM(orgs, dnsNames []string, commonName string, parentCa *x509.Certificate, parentPrivateKey *rsa.PrivateKey) (*bytes.Buffer, *bytes.Buffer, error) {
-	newCert := &x509.Certificate{
+func getServerCertPEM(orgs, dnsNames []string, commonName string, parentCa *x509.Certificate, parentPrivateKey *rsa.PrivateKey) (*bytes.Buffer, *bytes.Buffer, error) {
+	serverCert := &x509.Certificate{
 		DNSNames:     dnsNames,
 		SerialNumber: big.NewInt(1024),
 		Subject: pkix.Name{
@@ -242,27 +242,27 @@ func getClientCertPEM(orgs, dnsNames []string, commonName string, parentCa *x509
 		KeyUsage:    x509.KeyUsageDigitalSignature,
 	}
 
-	newPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	serverPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	newCertBytes, err := x509.CreateCertificate(rand.Reader, newCert, parentCa, &newPrivateKey.PublicKey, parentPrivateKey)
+	serverCertBytes, err := x509.CreateCertificate(rand.Reader, serverCert, parentCa, &serverPrivateKey.PublicKey, parentPrivateKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	newCertPEM := new(bytes.Buffer)
-	_ = pem.Encode(newCertPEM, &pem.Block{
+	serverCertPEM := new(bytes.Buffer)
+	_ = pem.Encode(serverCertPEM, &pem.Block{
 		Type:  "CERTIFICATE",
-		Bytes: newCertBytes,
+		Bytes: serverCertBytes,
 	})
 
-	newPrivateKeyPEM := new(bytes.Buffer)
-	_ = pem.Encode(newPrivateKeyPEM, &pem.Block{
+	serverPrivateKeyPEM := new(bytes.Buffer)
+	_ = pem.Encode(serverPrivateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(newPrivateKey),
+		Bytes: x509.MarshalPKCS1PrivateKey(serverPrivateKey),
 	})
 
-	return newCertPEM, newPrivateKeyPEM, nil
+	return serverCertPEM, serverPrivateKeyPEM, nil
 }
