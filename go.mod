@@ -3,7 +3,6 @@ module github.com/zerok-ai/zerok-injector
 go 1.18
 
 require (
-	github.com/stretchr/testify v1.8.1 // indirect
 	k8s.io/api v0.26.0
 	k8s.io/apimachinery v0.26.0
 	k8s.io/client-go v0.26.0
