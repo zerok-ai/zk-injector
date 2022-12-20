@@ -12,16 +12,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Inject mutates
-func Inject(body []byte, verbose bool) ([]byte, error) {
-	log.Println("Mutate request received.")
-	if verbose {
-		log.Printf("recv: %s\n", string(body)) // untested section
-	}
+func Inject(body []byte) ([]byte, error) {
+	log.Printf("recv: %s\n", string(body)) // untested section
 
-	// unmarshal request into AdmissionReview struct
-	admReview := v1.AdmissionReview{}
-	if err := json.Unmarshal(body, &admReview); err != nil {
+	admissionReview := v1.AdmissionReview{}
+	if err := json.Unmarshal(body, &admissionReview); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
 	}
 
@@ -29,29 +24,22 @@ func Inject(body []byte, verbose bool) ([]byte, error) {
 	var pod *corev1.Pod
 
 	responseBody := []byte{}
-	ar := admReview.Request
-	resp := v1.AdmissionResponse{}
+	ar := admissionReview.Request
+	admissionResponse := v1.AdmissionResponse{}
 
 	if ar != nil {
 
-		// get the Pod object and unmarshal it into its struct, if we cannot, we might as well stop here
 		if err := json.Unmarshal(ar.Object.Raw, &pod); err != nil {
 			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
 		}
-		// set response options
-		resp.Allowed = true
-		resp.UID = ar.UID
-		pT := v1.PatchTypeJSONPatch
-		resp.PatchType = &pT // it's annoying that this needs to be a pointer as you cannot give a pointer to a constant?
 
-		// add some audit annotations, helpful to know why a object was modified, maybe (?)
-		resp.AuditAnnotations = map[string]string{
-			"zk-injector": "yup it did it new",
-		}
+		admissionResponse.UID = ar.UID
+		admissionResponse.Allowed = true
 
-		// the actual mutation is done by a string in JSONPatch style, i.e. we don't _actually_ modify the object, but
-		// tell K8S how it should modifiy it
-		p := getPatches()
+		patchType := v1.PatchTypeJSONPatch
+		admissionResponse.PatchType = &patchType
+
+		patches := getPatches()
 		// fmt.Printf("The pod name is %v.\n", pod.Name)
 		// ///metadata/labels/zk-status
 		// for i, container := range pod.Spec.Containers {
@@ -61,34 +49,30 @@ func Inject(body []byte, verbose bool) ([]byte, error) {
 		// 		"path":  fmt.Sprintf("/spec/containers/%d/name", i),
 		// 		"value": name + "-zk-inject",
 		// 	}
-		// 	p = append(p, patch)
+		// 	patches = append(patches, patch)
 		// }
 		// parse the []map into JSON
-		resp.Patch, err = json.Marshal(p)
+		admissionResponse.Patch, err = json.Marshal(patches)
 
-		fmt.Printf("The patches are %v\n", p)
+		fmt.Printf("The patches are %v\n", patches)
 
 		if err != nil {
 			fmt.Printf("Error caught while marshalling the patches %v.\n", err)
 		}
 
-		// Success, of course ;)
-		resp.Result = &metav1.Status{
+		admissionResponse.Result = &metav1.Status{
 			Status: "Success",
 		}
 
-		admReview.Response = &resp
-		// back into JSON so we can return the finished AdmissionReview w/ Response directly
-		// w/o needing to convert things in the http handler
-		responseBody, err = json.Marshal(admReview)
+		admissionReview.Response = &admissionResponse
+
+		responseBody, err = json.Marshal(admissionReview)
 		if err != nil {
-			return nil, err // untested section
+			return nil, err
 		}
 	}
 
-	if verbose {
-		log.Printf("resp: %s\n", string(responseBody)) // untested section
-	}
+	log.Printf("resp: %s\n", string(responseBody))
 
 	return responseBody, nil
 }

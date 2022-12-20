@@ -45,7 +45,7 @@ func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modified, err := m.Inject(body, true)
+	modified, err := m.Inject(body)
 
 	if err != nil {
 		errorResponse(err, w)
@@ -82,7 +82,6 @@ func main() {
 		fmt.Printf("Failed to load certificate key pair: %v.\n", err)
 	}
 
-	// create or update the mutatingwebhookconfiguration
 	err = createOrUpdateMutatingWebhookConfiguration(caPEM, webhookServiceName, webhookNamespace)
 	if err != nil {
 		fmt.Printf("Failed to create or update the mutating webhook configuration: %v\n", err)
@@ -99,7 +98,7 @@ func main() {
 		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{pair}},
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20, // 1048576
+		MaxHeaderBytes: 1 << 20,
 	}
 
 	s.ListenAndServeTLS("", "")
@@ -129,7 +128,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 			AdmissionReviewVersions: []string{"v1"},
 			SideEffects:             &sideEffect,
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				CABundle: caPEM.Bytes(), // self-generated CA for the webhook
+				CABundle: caPEM.Bytes(),
 				Service: &admissionregistrationv1.ServiceReference{
 					Name:      webhookService,
 					Namespace: webhookNamespace,
@@ -170,7 +169,6 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 		fmt.Printf("The error is %v\n", err.Error())
 		return err
 	} else {
-		// there is an existing mutatingWebhookConfiguration
 		if len(foundWebhookConfig.Webhooks) != len(mutatingWebhookConfig.Webhooks) ||
 			!(foundWebhookConfig.Webhooks[0].Name == mutatingWebhookConfig.Webhooks[0].Name &&
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].AdmissionReviewVersions, mutatingWebhookConfig.Webhooks[0].AdmissionReviewVersions) &&
