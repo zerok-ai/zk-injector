@@ -10,7 +10,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"html"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -18,7 +17,7 @@ import (
 	"reflect"
 	"time"
 
-	m "github.com/zerok-ai/zerok-injector/pkg/mutate"
+	m "github.com/zerok-ai/zerok-injector/pkg/inject"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,54 +26,44 @@ import (
 )
 
 var (
-	webhookConfigName = "zk-webhook"
-	webhookInjectPath = "/zk-injector"
+	webhookName        = "zk-webhook"
+	webhookPath        = "/zk-injector"
+	webhookNamespace   = "zk-injector"
+	webhookServiceName = "zk-injector"
 )
 
-var (
-	webhookNamespace   string
-	webhookServiceName string
-)
-
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "hello %q", html.EscapeString(r.URL.Path))
+func defaultHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Request received at Path %q\n", r.URL.Path)
 }
 
-func handleMutate(w http.ResponseWriter, r *http.Request) {
-	// read the body / request
-	fmt.Printf("Handle mutate request recevied.\n")
+func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Request recevied.\n")
 	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
 
 	if err != nil {
-		sendError(err, w)
+		errorResponse(err, w)
 		return
 	}
 
-	// mutate the request
-	mutated, err := m.Mutate(body, true)
+	modified, err := m.Inject(body, true)
+
 	if err != nil {
-		sendError(err, w)
+		errorResponse(err, w)
 		return
 	}
 
-	// and write it back
 	w.WriteHeader(http.StatusOK)
-	w.Write(mutated)
+	w.Write(modified)
+
+	r.Body.Close()
 }
 
-func sendError(err error, w http.ResponseWriter) {
+func errorResponse(err error, w http.ResponseWriter) {
 	log.Println(err)
 	w.WriteHeader(http.StatusInternalServerError)
-	fmt.Fprintf(w, "%s", err)
 }
 
 func main() {
-	log.Println("Starting server ...")
-
-	webhookNamespace = "zk-injector"
-	webhookServiceName := "zk-injector"
-
 	dnsNames := []string{
 		webhookServiceName,
 		webhookServiceName + "." + webhookNamespace,
@@ -101,8 +90,8 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", handleRoot)
-	mux.HandleFunc("/zk-injector", handleMutate)
+	mux.HandleFunc("/", defaultHandler)
+	mux.HandleFunc("/zk-injector", injectRequestHandler)
 
 	s := &http.Server{
 		Addr:           ":8443",
@@ -133,7 +122,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 	sideEffect := admissionregistrationv1.SideEffectClassNone
 	mutatingWebhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: webhookConfigName,
+			Name: webhookName,
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{{
 			Name:                    "zk-webhook.zerok.ai",
@@ -144,7 +133,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 				Service: &admissionregistrationv1.ServiceReference{
 					Name:      webhookService,
 					Namespace: webhookNamespace,
-					Path:      &webhookInjectPath,
+					Path:      &webhookPath,
 				},
 			},
 			Rules: []admissionregistrationv1.RuleWithOperations{
@@ -169,15 +158,15 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 		}},
 	}
 
-	foundWebhookConfig, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Get(context.TODO(), webhookConfigName, metav1.GetOptions{})
+	foundWebhookConfig, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Get(context.TODO(), webhookName, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Create(context.TODO(), mutatingWebhookConfig, metav1.CreateOptions{}); err != nil {
-			fmt.Printf("Failed to create the mutatingwebhookconfiguration: %s\n", webhookConfigName)
+			fmt.Printf("Failed to create the mutatingwebhookconfiguration: %s\n", webhookName)
 			return err
 		}
-		fmt.Printf("Created mutatingwebhookconfiguration: %s\n", webhookConfigName)
+		fmt.Printf("Created mutatingwebhookconfiguration: %s\n", webhookName)
 	} else if err != nil {
-		fmt.Printf("Failed to check the mutatingwebhookconfiguration: %s\n", webhookConfigName)
+		fmt.Printf("Failed to check the mutatingwebhookconfiguration: %s\n", webhookName)
 		fmt.Printf("The error is %v\n", err.Error())
 		return err
 	} else {
@@ -193,50 +182,55 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].ClientConfig.Service, mutatingWebhookConfig.Webhooks[0].ClientConfig.Service)) {
 			mutatingWebhookConfig.ObjectMeta.ResourceVersion = foundWebhookConfig.ObjectMeta.ResourceVersion
 			if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Update(context.TODO(), mutatingWebhookConfig, metav1.UpdateOptions{}); err != nil {
-				fmt.Printf("Failed to update the mutatingwebhookconfiguration: %s", webhookConfigName)
+				fmt.Printf("Failed to update the mutatingwebhookconfiguration: %s", webhookName)
 				return err
 			}
-			fmt.Printf("Updated the mutatingwebhookconfiguration: %s\n", webhookConfigName)
+			fmt.Printf("Updated the mutatingwebhookconfiguration: %s\n", webhookName)
 		}
-		fmt.Printf("The mutatingwebhookconfiguration: %s already exists and has no change\n", webhookConfigName)
+		fmt.Printf("The mutatingwebhookconfiguration: %s already exists and has no change\n", webhookName)
 	}
 
 	return nil
 }
 
 func generateCert(orgs, dnsNames []string, commonName string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
-	// init CA config
 	ca := &x509.Certificate{
-		SerialNumber:          big.NewInt(2022),
+		SerialNumber:          big.NewInt(int64(time.Now().Day())),
 		Subject:               pkix.Name{Organization: orgs},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(1, 0, 0), // expired in 1 year
+		NotAfter:              time.Now().AddDate(10, 0, 0),
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
 
-	// generate private key for CA
 	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// create the CA certificate
 	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivateKey.PublicKey, caPrivateKey)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// CA certificate with PEM encoded
 	caPEM := new(bytes.Buffer)
 	_ = pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
 
-	// new certificate config
+	newCertPEM, newPrivateKeyPEM, err := getClientCertPEM(orgs, dnsNames, commonName, ca, caPrivateKey)
+
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return caPEM, newCertPEM, newPrivateKeyPEM, nil
+}
+
+func getClientCertPEM(orgs, dnsNames []string, commonName string, parentCa *x509.Certificate, parentPrivateKey *rsa.PrivateKey) (*bytes.Buffer, *bytes.Buffer, error) {
 	newCert := &x509.Certificate{
 		DNSNames:     dnsNames,
 		SerialNumber: big.NewInt(1024),
@@ -245,36 +239,32 @@ func generateCert(orgs, dnsNames []string, commonName string) (*bytes.Buffer, *b
 			Organization: orgs,
 		},
 		NotBefore:   time.Now(),
-		NotAfter:    time.Now().AddDate(1, 0, 0), // expired in 1 year
+		NotAfter:    time.Now().AddDate(10, 0, 0),
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:    x509.KeyUsageDigitalSignature,
 	}
 
-	// generate new private key
 	newPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	// sign the new certificate
-	newCertBytes, err := x509.CreateCertificate(rand.Reader, newCert, ca, &newPrivateKey.PublicKey, caPrivateKey)
+	newCertBytes, err := x509.CreateCertificate(rand.Reader, newCert, parentCa, &newPrivateKey.PublicKey, parentPrivateKey)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	// new certificate with PEM encoded
 	newCertPEM := new(bytes.Buffer)
 	_ = pem.Encode(newCertPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: newCertBytes,
 	})
 
-	// new private key with PEM encoded
 	newPrivateKeyPEM := new(bytes.Buffer)
 	_ = pem.Encode(newPrivateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(newPrivateKey),
 	})
 
-	return caPEM, newCertPEM, newPrivateKeyPEM, nil
+	return newCertPEM, newPrivateKeyPEM, nil
 }

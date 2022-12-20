@@ -1,6 +1,6 @@
 // Package mutate deals with AdmissionReview requests and responses, it takes in the request body and returns a readily converted JSON []byte that can be
 // returned from a http Handler w/o needing to further convert or modify it, it also makes testing Mutate() kind of easy w/o need for a fake http server, etc.
-package mutate
+package inject
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Mutate mutates
-func Mutate(body []byte, verbose bool) ([]byte, error) {
+// Inject mutates
+func Inject(body []byte, verbose bool) ([]byte, error) {
 	log.Println("Mutate request received.")
 	if verbose {
 		log.Printf("recv: %s\n", string(body)) // untested section
