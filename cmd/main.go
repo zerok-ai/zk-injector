@@ -10,7 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/big"
 	"net/http"
@@ -38,7 +38,7 @@ func defaultHandler(w http.ResponseWriter, r *http.Request) {
 
 func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Request recevied.\n")
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
 		errorResponse(err, w)
