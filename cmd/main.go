@@ -72,14 +72,14 @@ func main() {
 	commonName := webhookServiceName + "." + webhookNamespace + ".svc"
 
 	org := "zerok"
-	caPEM, certPEM, certKeyPEM, err := generateCert([]string{org}, dnsNames, commonName)
+	caPEM, serverCertPEM, serverCertKeyPEM, err := generateCert([]string{org}, dnsNames, commonName)
 	if err != nil {
-		fmt.Printf("Failed to generate ca and certificate key pair: %v.\n", err)
+		fmt.Printf("Failed to generate certificate: %v.\n", err)
 	}
 
-	pair, err := tls.X509KeyPair(certPEM.Bytes(), certKeyPEM.Bytes())
+	serverPair, err := tls.X509KeyPair(serverCertPEM.Bytes(), serverCertKeyPEM.Bytes())
 	if err != nil {
-		fmt.Printf("Failed to load certificate key pair: %v.\n", err)
+		fmt.Printf("Failed to load server certificate key pair: %v.\n", err)
 	}
 
 	err = createOrUpdateMutatingWebhookConfiguration(caPEM, webhookServiceName, webhookNamespace)
@@ -95,7 +95,7 @@ func main() {
 	s := &http.Server{
 		Addr:           ":8443",
 		Handler:        mux,
-		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{pair}},
+		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{serverPair}},
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
