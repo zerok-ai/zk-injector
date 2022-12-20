@@ -157,7 +157,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 		}},
 	}
 
-	foundWebhookConfig, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Get(context.TODO(), webhookName, metav1.GetOptions{})
+	existingWebhookConfig, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Get(context.TODO(), webhookName, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Create(context.TODO(), mutatingWebhookConfig, metav1.CreateOptions{}); err != nil {
 			fmt.Printf("Failed to create the mutatingwebhookconfiguration: %s\n", webhookName)
@@ -168,27 +168,39 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 		fmt.Printf("Failed to check the mutatingwebhookconfiguration: %s\n", webhookName)
 		fmt.Printf("The error is %v\n", err.Error())
 		return err
-	} else {
-		if len(foundWebhookConfig.Webhooks) != len(mutatingWebhookConfig.Webhooks) ||
-			!(foundWebhookConfig.Webhooks[0].Name == mutatingWebhookConfig.Webhooks[0].Name &&
-				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].AdmissionReviewVersions, mutatingWebhookConfig.Webhooks[0].AdmissionReviewVersions) &&
-				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].SideEffects, mutatingWebhookConfig.Webhooks[0].SideEffects) &&
-				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].FailurePolicy, mutatingWebhookConfig.Webhooks[0].FailurePolicy) &&
-				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].Rules, mutatingWebhookConfig.Webhooks[0].Rules) &&
-				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].NamespaceSelector, mutatingWebhookConfig.Webhooks[0].NamespaceSelector) &&
-				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].ClientConfig.CABundle, mutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle) &&
-				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].ClientConfig.Service, mutatingWebhookConfig.Webhooks[0].ClientConfig.Service)) {
-			mutatingWebhookConfig.ObjectMeta.ResourceVersion = foundWebhookConfig.ObjectMeta.ResourceVersion
-			if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Update(context.TODO(), mutatingWebhookConfig, metav1.UpdateOptions{}); err != nil {
-				fmt.Printf("Failed to update the mutatingwebhookconfiguration: %s", webhookName)
-				return err
-			}
-			fmt.Printf("Updated the mutatingwebhookconfiguration: %s\n", webhookName)
+	} else if !areWebHooksSame(existingWebhookConfig, mutatingWebhookConfig) {
+		mutatingWebhookConfig.ObjectMeta.ResourceVersion = existingWebhookConfig.ObjectMeta.ResourceVersion
+		if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Update(context.TODO(), mutatingWebhookConfig, metav1.UpdateOptions{}); err != nil {
+			fmt.Printf("Failed to update the mutatingwebhookconfiguration: %s", webhookName)
+			return err
 		}
+		fmt.Printf("Updated the mutatingwebhookconfiguration: %s\n", webhookName)
+	} else {
 		fmt.Printf("The mutatingwebhookconfiguration: %s already exists and has no change\n", webhookName)
 	}
 
 	return nil
+}
+
+func areWebHooksSame(foundWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, mutatingWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration) bool {
+	if len(foundWebhookConfig.Webhooks) != len(mutatingWebhookConfig.Webhooks) {
+		return false
+	}
+	len := len(foundWebhookConfig.Webhooks)
+	for i := 0; i < len; i++ {
+		equal := foundWebhookConfig.Webhooks[i].Name == mutatingWebhookConfig.Webhooks[i].Name &&
+			reflect.DeepEqual(foundWebhookConfig.Webhooks[i].AdmissionReviewVersions, mutatingWebhookConfig.Webhooks[i].AdmissionReviewVersions) &&
+			reflect.DeepEqual(foundWebhookConfig.Webhooks[i].SideEffects, mutatingWebhookConfig.Webhooks[i].SideEffects) &&
+			reflect.DeepEqual(foundWebhookConfig.Webhooks[i].FailurePolicy, mutatingWebhookConfig.Webhooks[i].FailurePolicy) &&
+			reflect.DeepEqual(foundWebhookConfig.Webhooks[i].Rules, mutatingWebhookConfig.Webhooks[i].Rules) &&
+			reflect.DeepEqual(foundWebhookConfig.Webhooks[i].NamespaceSelector, mutatingWebhookConfig.Webhooks[i].NamespaceSelector) &&
+			reflect.DeepEqual(foundWebhookConfig.Webhooks[i].ClientConfig.CABundle, mutatingWebhookConfig.Webhooks[i].ClientConfig.CABundle) &&
+			reflect.DeepEqual(foundWebhookConfig.Webhooks[i].ClientConfig.Service, mutatingWebhookConfig.Webhooks[i].ClientConfig.Service)
+		if !equal {
+			return false
+		}
+	}
+	return true
 }
 
 func generateCert(orgs, dnsNames []string, commonName string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
