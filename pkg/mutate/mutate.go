@@ -51,20 +51,26 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 
 		// the actual mutation is done by a string in JSONPatch style, i.e. we don't _actually_ modify the object, but
 		// tell K8S how it should modifiy it
-		p := []map[string]string{}
-		fmt.Printf("The pod name is %v.\n", pod.Name)
-		///metadata/labels/zk-status
-		for i, container := range pod.Spec.Containers {
-			name := container.Name
-			patch := map[string]string{
-				"op":    "replace",
-				"path":  fmt.Sprintf("/spec/containers/%d/name", i),
-				"value": name + "-zk-inject",
-			}
-			p = append(p, patch)
-		}
+		p := getPatches()
+		// fmt.Printf("The pod name is %v.\n", pod.Name)
+		// ///metadata/labels/zk-status
+		// for i, container := range pod.Spec.Containers {
+		// 	name := container.Name
+		// 	patch := map[string]string{
+		// 		"op":    "replace",
+		// 		"path":  fmt.Sprintf("/spec/containers/%d/name", i),
+		// 		"value": name + "-zk-inject",
+		// 	}
+		// 	p = append(p, patch)
+		// }
 		// parse the []map into JSON
 		resp.Patch, err = json.Marshal(p)
+
+		fmt.Printf("The patches are %v\n", p)
+
+		if err != nil {
+			fmt.Printf("Error caught while marshalling the patches %v.\n", err)
+		}
 
 		// Success, of course ;)
 		resp.Result = &metav1.Status{
@@ -85,4 +91,101 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 	}
 
 	return responseBody, nil
+}
+
+func getPatches() []map[string]interface{} {
+	p := make([]map[string]interface{}, 0)
+	p = append(p, getInitContainerPatches()...)
+	p = append(p, getVolumePatch()...)
+	p = append(p, getContainerPatches()...)
+	return p
+}
+
+func getContainerPatches() []map[string]interface{} {
+	p := make([]map[string]interface{}, 0)
+
+	addCommand := map[string]interface{}{
+		"op":    "add",
+		"path":  "/spec/template/spec/containers/0/command",
+		"value": []string{"echo", "Rajeev8989", "&&", "sleep", "20000"},
+	}
+
+	p = append(p, addCommand)
+
+	// addArgs := map[string]interface{}{
+	// 	"op":    "add",
+	// 	"path":  "/spec/template/spec/containers/0/args",
+	// 	"value": []string{"-c", "/opt/zerok/zerok-agent.sh"},
+	// }
+
+	// p = append(p, addArgs)
+
+	addVolumeMount := map[string]interface{}{
+		"op":   "add",
+		"path": "/spec/template/spec/containers/0/volumeMounts/-",
+		"value": corev1.VolumeMount{
+			MountPath: "/opt/zerok",
+			Name:      "zerok-init",
+		},
+	}
+
+	p = append(p, addVolumeMount)
+
+	return p
+}
+
+func getVolumePatch() []map[string]interface{} {
+	p := make([]map[string]interface{}, 0)
+
+	addVolume := map[string]interface{}{
+		"op":   "add",
+		"path": "/spec/template/spec/volumes/-",
+		"value": corev1.Volume{
+			Name: "zerok-init",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+	}
+
+	p = append(p, addVolume)
+
+	return p
+}
+
+func getInitContainerPatches() []map[string]interface{} {
+	p := make([]map[string]interface{}, 0)
+
+	//initContainer patches
+
+	initInitialize := map[string]interface{}{
+		"op":    "add",
+		"path":  "/spec/template/spec/initContainers",
+		"value": []corev1.Container{},
+	}
+
+	p = append(p, initInitialize)
+
+	container := &corev1.Container{
+		Name:            "zerok-init",
+		Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
+		Image:           "injection-test:0.0.1",
+		ImagePullPolicy: corev1.PullNever,
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				MountPath: "/opt/temp",
+				Name:      "zerok-init",
+			},
+		},
+	}
+
+	addInitContainer := map[string]interface{}{
+		"op":    "add",
+		"path":  "/spec/template/spec/initContainers/-",
+		"value": container,
+	}
+
+	p = append(p, addInitContainer)
+
+	return p
 }
