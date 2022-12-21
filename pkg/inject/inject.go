@@ -79,10 +79,18 @@ func getContainerPatches() []map[string]interface{} {
 	addCommand := map[string]interface{}{
 		"op":    "add",
 		"path":  "/spec/containers/0/command",
-		"value": []string{"echo", "Rajeev8989", "&&", "sleep", "20000"},
+		"value": []string{"/bin/sh"},
 	}
 
 	p = append(p, addCommand)
+
+	addArgs := map[string]interface{}{
+		"op":    "add",
+		"path":  "/spec/containers/0/args",
+		"value": []string{"-c", "/opt/zerok/zerok-agent.sh"},
+	}
+
+	p = append(p, addArgs)
 
 	addVolumeMount := map[string]interface{}{
 		"op":   "add",
