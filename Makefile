@@ -5,16 +5,16 @@ IMAGE_VERSION = 0.6
 
 export GO111MODULE=on
 
-app: deps
+build: sync
 	go build -v -o $(NAME) cmd/main.go
 
-deps:
+sync:
 	go get -v ./...
 	
-docker:
+docker-build:
 	docker build --no-cache -t $(IMAGE_PREFIX)/$(IMAGE_NAME):$(IMAGE_VERSION) .
 	
-push:
+docker-push:
 	docker push $(IMAGE_PREFIX)/$(IMAGE_NAME):$(IMAGE_VERSION) 
 
 kind:

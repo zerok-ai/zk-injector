@@ -6,9 +6,9 @@ RUN apk add make
 
 WORKDIR /go/src/zk-injector
 ADD . .
-RUN make app
+RUN make build
 
 FROM alpine
-WORKDIR /app
+WORKDIR /zk-injector
 COPY --from=build /go/src/zk-injector/zk-injector .
-CMD ["/app/zk-injector"]
+CMD ["/zk-injector/zk-injector"]
