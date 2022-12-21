@@ -39,7 +39,7 @@ func Inject(body []byte) ([]byte, error) {
 		patchType := v1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 
-		patches := getPatches()
+		patches := getPatches(pod)
 		admissionResponse.Patch, err = json.Marshal(patches)
 
 		fmt.Printf("The patches are %v\n", patches)
@@ -65,9 +65,9 @@ func Inject(body []byte) ([]byte, error) {
 	return responseBody, nil
 }
 
-func getPatches() []map[string]interface{} {
+func getPatches(pod *corev1.Pod) []map[string]interface{} {
 	p := make([]map[string]interface{}, 0)
-	p = append(p, getInitContainerPatches()...)
+	p = append(p, getInitContainerPatches(pod)...)
 	p = append(p, getVolumePatch()...)
 	p = append(p, getContainerPatches()...)
 	return p
@@ -117,18 +117,18 @@ func getVolumePatch() []map[string]interface{} {
 	return p
 }
 
-func getInitContainerPatches() []map[string]interface{} {
+func getInitContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 	p := make([]map[string]interface{}, 0)
 
-	//initContainer patches
+	if pod.Spec.InitContainers == nil {
+		initInitialize := map[string]interface{}{
+			"op":    "add",
+			"path":  "/spec/initContainers",
+			"value": []corev1.Container{},
+		}
 
-	initInitialize := map[string]interface{}{
-		"op":    "add",
-		"path":  "/spec/initContainers",
-		"value": []corev1.Container{},
+		p = append(p, initInitialize)
 	}
-
-	p = append(p, initInitialize)
 
 	addInitContainer := map[string]interface{}{
 		"op":   "add",
