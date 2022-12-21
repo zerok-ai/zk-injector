@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,11 +70,28 @@ func getPatches(pod *corev1.Pod) []map[string]interface{} {
 	p := make([]map[string]interface{}, 0)
 	p = append(p, getInitContainerPatches(pod)...)
 	p = append(p, getVolumePatch()...)
-	p = append(p, getContainerPatches()...)
+	p = append(p, getContainerPatches(pod)...)
 	return p
 }
 
-func getContainerPatches() []map[string]interface{} {
+func getPatchCmdForContainer(container *corev1.Container) ([]string, error) {
+	if container == nil {
+		fmt.Println("Container is nil.")
+		return []string{}, nil
+	}
+	existingCmd, err := zkclient.GetCommandFromImage(container.Image)
+	if err != nil {
+		fmt.Println("Error while getting patch command for image: ", container.Image)
+		return []string{}, nil
+	}
+	fmt.Println("Exiting cmd for container ", container.Name, " is ", existingCmd)
+	return existingCmd, nil
+}
+
+func getContainerPatches(pod *corev1.Pod) []map[string]interface{} {
+
+	getPatchCmdForContainer(&pod.Spec.Containers[0])
+
 	p := make([]map[string]interface{}, 0)
 
 	addCommand := map[string]interface{}{

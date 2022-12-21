@@ -17,7 +17,7 @@ import (
 	"reflect"
 	"time"
 
-	m "github.com/zerok-ai/zerok-injector/pkg/inject"
+	"github.com/zerok-ai/zerok-injector/pkg/inject"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +45,7 @@ func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modified, err := m.Inject(body)
+	modified, err := inject.Inject(body)
 
 	if err != nil {
 		errorResponse(err, w)
