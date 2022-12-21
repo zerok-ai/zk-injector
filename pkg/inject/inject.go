@@ -40,18 +40,6 @@ func Inject(body []byte) ([]byte, error) {
 		admissionResponse.PatchType = &patchType
 
 		patches := getPatches()
-		// fmt.Printf("The pod name is %v.\n", pod.Name)
-		// ///metadata/labels/zk-status
-		// for i, container := range pod.Spec.Containers {
-		// 	name := container.Name
-		// 	patch := map[string]string{
-		// 		"op":    "replace",
-		// 		"path":  fmt.Sprintf("/spec/containers/%d/name", i),
-		// 		"value": name + "-zk-inject",
-		// 	}
-		// 	patches = append(patches, patch)
-		// }
-		// parse the []map into JSON
 		admissionResponse.Patch, err = json.Marshal(patches)
 
 		fmt.Printf("The patches are %v\n", patches)
@@ -91,18 +79,10 @@ func getContainerPatches() []map[string]interface{} {
 	addCommand := map[string]interface{}{
 		"op":    "add",
 		"path":  "/spec/template/spec/containers/0/command",
-		"value": []string{"echo", "Rajeev8989", "&&", "sleep", "20000"},
+		"value": []string{"echo", "Rajeev8989"},
 	}
 
 	p = append(p, addCommand)
-
-	// addArgs := map[string]interface{}{
-	// 	"op":    "add",
-	// 	"path":  "/spec/template/spec/containers/0/args",
-	// 	"value": []string{"-c", "/opt/zerok/zerok-agent.sh"},
-	// }
-
-	// p = append(p, addArgs)
 
 	addVolumeMount := map[string]interface{}{
 		"op":   "add",
@@ -150,23 +130,21 @@ func getInitContainerPatches() []map[string]interface{} {
 
 	p = append(p, initInitialize)
 
-	container := &corev1.Container{
-		Name:            "zerok-init",
-		Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
-		Image:           "injection-test:0.0.1",
-		ImagePullPolicy: corev1.PullNever,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				MountPath: "/opt/temp",
-				Name:      "zerok-init",
+	addInitContainer := map[string]interface{}{
+		"op":   "add",
+		"path": "/spec/template/spec/initContainers/-",
+		"value": &corev1.Container{
+			Name:            "zerok-init",
+			Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
+			Image:           "injection-test:0.0.1",
+			ImagePullPolicy: corev1.PullNever,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					MountPath: "/opt/temp",
+					Name:      "zerok-init",
+				},
 			},
 		},
-	}
-
-	addInitContainer := map[string]interface{}{
-		"op":    "add",
-		"path":  "/spec/template/spec/initContainers/-",
-		"value": container,
 	}
 
 	p = append(p, addInitContainer)
