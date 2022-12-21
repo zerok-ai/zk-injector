@@ -78,15 +78,15 @@ func getContainerPatches() []map[string]interface{} {
 
 	addCommand := map[string]interface{}{
 		"op":    "add",
-		"path":  "/spec/template/spec/containers/0/command",
-		"value": []string{"echo", "Rajeev8989"},
+		"path":  "/spec/containers/0/command",
+		"value": []string{"echo", "Rajeev8989", "&&", "sleep", "20000"},
 	}
 
 	p = append(p, addCommand)
 
 	addVolumeMount := map[string]interface{}{
 		"op":   "add",
-		"path": "/spec/template/spec/containers/0/volumeMounts/-",
+		"path": "/spec/containers/0/volumeMounts/-",
 		"value": corev1.VolumeMount{
 			MountPath: "/opt/zerok",
 			Name:      "zerok-init",
@@ -103,7 +103,7 @@ func getVolumePatch() []map[string]interface{} {
 
 	addVolume := map[string]interface{}{
 		"op":   "add",
-		"path": "/spec/template/spec/volumes/-",
+		"path": "/spec/volumes/-",
 		"value": corev1.Volume{
 			Name: "zerok-init",
 			VolumeSource: corev1.VolumeSource{
@@ -124,7 +124,7 @@ func getInitContainerPatches() []map[string]interface{} {
 
 	initInitialize := map[string]interface{}{
 		"op":    "add",
-		"path":  "/spec/template/spec/initContainers",
+		"path":  "/spec/initContainers",
 		"value": []corev1.Container{},
 	}
 
@@ -132,7 +132,7 @@ func getInitContainerPatches() []map[string]interface{} {
 
 	addInitContainer := map[string]interface{}{
 		"op":   "add",
-		"path": "/spec/template/spec/initContainers/-",
+		"path": "/spec/initContainers/-",
 		"value": &corev1.Container{
 			Name:            "zerok-init",
 			Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
