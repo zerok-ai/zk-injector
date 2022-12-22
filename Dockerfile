@@ -11,5 +11,4 @@ RUN make build
 FROM alpine:3.17
 WORKDIR /zk-injector
 COPY --from=build /go/src/zk-injector/zk-injector .
-RUN apk add --update docker openrc
 CMD ["/zk-injector/zk-injector"]

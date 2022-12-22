@@ -3,18 +3,25 @@ package zkclient
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
 
 func GetCommandFromImage(image string) ([]string, error) {
 	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
-	// images, _ := dockerClient.ImageList(context.Background(), types.ImageListOptions{})
+	reader, _ := dockerClient.ImagePull(context.Background(), image, types.ImagePullOptions{})
+	defer reader.Close()
 
-	// fmt.Printf("Docker images %v\n", images)
+	if reader != nil {
+		fmt.Println("Pulled the docker image ", image)
+	}
 
-	imageInspect, _, err := dockerClient.ImageInspectWithRaw(context.Background(), "rajeevzerok/zk-injector:0.6")
+	time.Sleep(10 * time.Second)
+
+	imageInspect, _, err := dockerClient.ImageInspectWithRaw(context.Background(), image)
 
 	if err != nil {
 		fmt.Println("Error caught while getting cmd from image: ", image, ", Error is: ", err)
