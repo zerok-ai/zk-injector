@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/docker/docker/api/types"
 	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -74,12 +75,12 @@ func getPatches(pod *corev1.Pod) []map[string]interface{} {
 	return p
 }
 
-func getPatchCmdForContainer(container *corev1.Container) ([]string, error) {
+func getPatchCmdForContainer(container *corev1.Container, authConfig *types.AuthConfig) ([]string, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
 		return []string{}, nil
 	}
-	existingCmd, err := zkclient.GetCommandFromImage(container.Image)
+	existingCmd, err := zkclient.GetCommandFromImage(container.Image, authConfig)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
 		return []string{}, nil
@@ -90,7 +91,21 @@ func getPatchCmdForContainer(container *corev1.Container) ([]string, error) {
 
 func getContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 
-	getPatchCmdForContainer(&pod.Spec.Containers[0])
+	imagePullSecrets := &pod.Spec.ImagePullSecrets
+
+	var secrets []string = []string{}
+
+	for _, imagePullSecret := range *imagePullSecrets {
+		secrets = append(secrets, imagePullSecret.Name)
+	}
+
+	authConfig, err := zkclient.GetAuthDetailsFromSecret(secrets, pod.Namespace, pod.Spec.Containers[0].Image)
+
+	if err != nil {
+		fmt.Println("Error caught while getting auth config ", err)
+	}
+
+	getPatchCmdForContainer(&pod.Spec.Containers[0], authConfig)
 
 	p := make([]map[string]interface{}, 0)
 

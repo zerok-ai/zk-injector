@@ -2,6 +2,8 @@ package zkclient
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -9,11 +11,27 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func GetCommandFromImage(image string) ([]string, error) {
+func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, error) {
 	ctx := context.TODO()
 	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
-	reader, _ := dockerClient.ImagePull(ctx, image, types.ImagePullOptions{})
+	var reader io.ReadCloser
+	var imagePullOptions types.ImagePullOptions
+
+	if authConfig != nil {
+		encodedJSON, err := json.Marshal(&authConfig)
+		if err != nil {
+			fmt.Println("Error while getting encode Auth details")
+		}
+		authStr := base64.URLEncoding.EncodeToString(encodedJSON)
+		imagePullOptions = types.ImagePullOptions{RegistryAuth: authStr}
+
+	} else {
+		imagePullOptions = types.ImagePullOptions{}
+	}
+
+	reader, _ = dockerClient.ImagePull(ctx, image, imagePullOptions)
+
 	defer reader.Close()
 
 	io.ReadAll(reader)
