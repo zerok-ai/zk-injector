@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/zerok-ai/zerok-injector/pkg/inject"
+	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,14 @@ var (
 
 func defaultHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Request received at Path %q\n", r.URL.Path)
+	image := "cloud.canister.io:5000/rajeevr47/zk-injector"
+	authConfig, _ := zkclient.GetAuthDetailsFromSecret([]string{"dockerkey"}, "default", image)
+	existingCmd, err := zkclient.GetCommandFromImage(image, authConfig)
+	if err != nil {
+		fmt.Println("Error while getting patch command for image: ", image)
+	} else {
+		fmt.Println("Existing cmd is ", existingCmd)
+	}
 }
 
 func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,8 +105,8 @@ func main() {
 		Addr:           ":8443",
 		Handler:        mux,
 		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{serverPair}},
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
+		ReadTimeout:    30 * time.Second,
+		WriteTimeout:   30 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 
