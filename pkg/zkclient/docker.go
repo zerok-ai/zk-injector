@@ -3,25 +3,26 @@ package zkclient
 import (
 	"context"
 	"fmt"
-	"time"
+	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
 
 func GetCommandFromImage(image string) ([]string, error) {
+	ctx := context.TODO()
 	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
-	reader, _ := dockerClient.ImagePull(context.Background(), image, types.ImagePullOptions{})
+	reader, _ := dockerClient.ImagePull(ctx, image, types.ImagePullOptions{})
 	defer reader.Close()
+
+	io.ReadAll(reader)
 
 	if reader != nil {
 		fmt.Println("Pulled the docker image ", image)
 	}
 
-	time.Sleep(10 * time.Second)
-
-	imageInspect, _, err := dockerClient.ImageInspectWithRaw(context.Background(), image)
+	imageInspect, _, err := dockerClient.ImageInspectWithRaw(ctx, image)
 
 	if err != nil {
 		fmt.Println("Error caught while getting cmd from image: ", image, ", Error is: ", err)
