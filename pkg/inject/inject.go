@@ -71,27 +71,30 @@ func getPatches(pod *corev1.Pod) []map[string]interface{} {
 	p := make([]map[string]interface{}, 0)
 	p = append(p, getInitContainerPatches(pod)...)
 	p = append(p, getVolumePatch()...)
-	p = append(p, getContainerPatches(pod)...)
+	containerPatches, _ := getContainerPatches(pod)
+	p = append(p, containerPatches...)
 	return p
 }
 
 func getPatchCmdForContainer(container *corev1.Container, authConfig *types.AuthConfig) ([]string, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
-		return []string{}, nil
+		return []string{}, fmt.Errorf("container is nil")
 	}
 	existingCmd, err := zkclient.GetCommandFromImage(container.Image, authConfig)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
-		return []string{}, nil
+		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
 	}
 	fmt.Println("Exiting cmd for container ", container.Name, " is ", existingCmd)
 	return existingCmd, nil
 }
 
-func getContainerPatches(pod *corev1.Pod) []map[string]interface{} {
+func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
 	imagePullSecrets := &pod.Spec.ImagePullSecrets
+
+	p := make([]map[string]interface{}, 0)
 
 	var secrets []string = []string{}
 
@@ -103,11 +106,11 @@ func getContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 
 	if err != nil {
 		fmt.Println("Error caught while getting auth config ", err)
+		return p, fmt.Errorf("error caught while getting auth config %v", err)
+
 	}
 
 	getPatchCmdForContainer(&pod.Spec.Containers[0], authConfig)
-
-	p := make([]map[string]interface{}, 0)
 
 	addCommand := map[string]interface{}{
 		"op":    "add",
@@ -136,7 +139,7 @@ func getContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 
 	p = append(p, addVolumeMount)
 
-	return p
+	return p, nil
 }
 
 func getVolumePatch() []map[string]interface{} {

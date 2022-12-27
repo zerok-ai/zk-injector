@@ -27,7 +27,7 @@ func GetAuthDetailsFromSecret(names []string, namespace string, image string) (*
 
 		if err != nil {
 			fmt.Println("Error caught while getting the secret ", err)
-			return nil, err
+			return nil, fmt.Errorf("error caught while getting the secret %v in namespace %v", name, namespace)
 		}
 
 		dockerConfigBytes := secret.Data[dockerConfigKey]
@@ -37,7 +37,7 @@ func GetAuthDetailsFromSecret(names []string, namespace string, image string) (*
 
 		if err != nil {
 			fmt.Println("Error caught while unmarshalling the secret ", err)
-			return nil, err
+			return nil, fmt.Errorf("error caught while unmarshalling the secret %v in namespace %v", name, namespace)
 		}
 
 		authValuesMap := dockerConfigMap[authsKey].(map[string]interface{})

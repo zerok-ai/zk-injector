@@ -21,7 +21,8 @@ func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, 
 	if authConfig != nil {
 		encodedJSON, err := json.Marshal(&authConfig)
 		if err != nil {
-			fmt.Println("Error while getting encode Auth details")
+			fmt.Println("Error while marshalling Auth details")
+			return []string{}, fmt.Errorf("error while marshalling Auth details for image %v, Error is: %v", image, err)
 		}
 		authStr := base64.URLEncoding.EncodeToString(encodedJSON)
 		imagePullOptions = types.ImagePullOptions{RegistryAuth: authStr}
@@ -44,7 +45,7 @@ func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, 
 
 	if err != nil {
 		fmt.Println("Error caught while getting cmd from image: ", image, ", Error is: ", err)
-		return []string{}, nil
+		return []string{}, fmt.Errorf("error caught while getting cmd from image: %v, Error is: %v", image, err)
 	}
 
 	return imageInspect.Config.Cmd, nil
