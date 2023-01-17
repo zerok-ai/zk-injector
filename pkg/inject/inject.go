@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
@@ -94,50 +96,57 @@ func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
 	imagePullSecrets := &pod.Spec.ImagePullSecrets
 
-	p := make([]map[string]interface{}, 0)
-
 	var secrets []string = []string{}
 
 	for _, imagePullSecret := range *imagePullSecrets {
 		secrets = append(secrets, imagePullSecret.Name)
 	}
 
-	authConfig, err := zkclient.GetAuthDetailsFromSecret(secrets, pod.Namespace, pod.Spec.Containers[0].Image)
+	p := make([]map[string]interface{}, 0)
 
-	if err != nil {
-		fmt.Println("Error caught while getting auth config ", err)
-		return p, fmt.Errorf("error caught while getting auth config %v", err)
+	containers := pod.Spec.Containers
+
+	for i, _ := range containers {
+		podCmd := pod.Spec.Containers[i].Command
+
+		authConfig, err := zkclient.GetAuthDetailsFromSecret(secrets, pod.Namespace, pod.Spec.Containers[i].Image)
+
+		if err != nil {
+			fmt.Printf("Error caught while getting auth config %v for container %v.\n", err, i)
+			return p, fmt.Errorf("error caught while getting auth config %v", err)
+
+		}
+
+		getPatchCmdForContainer(&pod.Spec.Containers[i], authConfig)
+
+		addCommand := map[string]interface{}{
+			"op":    "add",
+			"path":  "/spec/containers/" + strconv.Itoa(i) + "/command",
+			"value": []string{"/bin/sh"},
+		}
+
+		p = append(p, addCommand)
+
+		addArgs := map[string]interface{}{
+			"op":    "add",
+			"path":  "/spec/containers/" + strconv.Itoa(i) + "/args",
+			"value": []string{"-c", "/opt/zerok/zerok-agent.sh", strings.Join(podCmd, " ")},
+		}
+
+		p = append(p, addArgs)
+
+		addVolumeMount := map[string]interface{}{
+			"op":   "add",
+			"path": "/spec/containers/" + strconv.Itoa(i) + "/volumeMounts/-",
+			"value": corev1.VolumeMount{
+				MountPath: "/opt/zerok",
+				Name:      "zerok-init",
+			},
+		}
+
+		p = append(p, addVolumeMount)
 
 	}
-
-	getPatchCmdForContainer(&pod.Spec.Containers[0], authConfig)
-
-	addCommand := map[string]interface{}{
-		"op":    "add",
-		"path":  "/spec/containers/0/command",
-		"value": []string{"/bin/sh"},
-	}
-
-	p = append(p, addCommand)
-
-	addArgs := map[string]interface{}{
-		"op":    "add",
-		"path":  "/spec/containers/0/args",
-		"value": []string{"-c", "/opt/zerok/zerok-agent.sh"},
-	}
-
-	p = append(p, addArgs)
-
-	addVolumeMount := map[string]interface{}{
-		"op":   "add",
-		"path": "/spec/containers/0/volumeMounts/-",
-		"value": corev1.VolumeMount{
-			MountPath: "/opt/zerok",
-			Name:      "zerok-init",
-		},
-	}
-
-	p = append(p, addVolumeMount)
 
 	return p, nil
 }
@@ -180,7 +189,7 @@ func getInitContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 		"value": &corev1.Container{
 			Name:            "zerok-init",
 			Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
-			Image:           "injection-test:0.0.1",
+			Image:           "rajeevzerok/init-container:latest",
 			ImagePullPolicy: corev1.PullNever,
 			VolumeMounts: []corev1.VolumeMount{
 				{

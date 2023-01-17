@@ -1,0 +1,15 @@
+apiVersion: skaffold/v4beta1
+kind: Config
+metadata:
+  name: zk-injector
+build:
+  artifacts:
+  - image: docker
+    docker:
+      dockerfile: Dockerfile
+  - image: rajeevzerok/zk-injector:latest
+    buildpacks:
+      builder: gcr.io/buildpacks/builder:v1
+manifests:
+  rawYaml:
+  - deploy/webhook.yaml
