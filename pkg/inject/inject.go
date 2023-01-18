@@ -75,6 +75,7 @@ func getPatches(pod *corev1.Pod) []map[string]interface{} {
 	p = append(p, getVolumePatch()...)
 	containerPatches, _ := getContainerPatches(pod)
 	p = append(p, containerPatches...)
+	fmt.Printf("The patches created are %v.\n", p)
 	return p
 }
 
@@ -107,7 +108,7 @@ func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 	containers := pod.Spec.Containers
 
 	for i, _ := range containers {
-		podCmd := pod.Spec.Containers[i].Command
+		//podCmd := pod.Spec.Containers[i].Command
 
 		authConfig, err := zkclient.GetAuthDetailsFromSecret(secrets, pod.Namespace, pod.Spec.Containers[i].Image)
 
@@ -117,7 +118,13 @@ func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
 		}
 
-		getPatchCmdForContainer(&pod.Spec.Containers[i], authConfig)
+		podCmd, err := getPatchCmdForContainer(&pod.Spec.Containers[i], authConfig)
+
+		if err != nil {
+			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
+			return p, fmt.Errorf("error caught while getting command %v", err)
+
+		}
 
 		addCommand := map[string]interface{}{
 			"op":    "add",
@@ -190,7 +197,7 @@ func getInitContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 			Name:            "zerok-init",
 			Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
 			Image:           "rajeevzerok/init-container:latest",
-			ImagePullPolicy: corev1.PullNever,
+			ImagePullPolicy: corev1.PullAlways,
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					MountPath: "/opt/temp",

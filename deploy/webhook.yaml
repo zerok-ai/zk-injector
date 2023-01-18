@@ -14,6 +14,14 @@ spec:
     app: zk-injector
 
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zk-injector
+  labels:
+    app: zk-injector
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -97,10 +105,3 @@ subjects:
   name: zk-injector
   namespace: zk-injector
 
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: zk-injector
-  labels:
-    app: zk-injector

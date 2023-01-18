@@ -18,4 +18,6 @@ pwd
 echo "ls:"
 ls
 
-node --require '/opt/zerok/opentelemetry/tracing.js' src/index.js
+if [["$0" == *"java"*]]; then
+   echo "java program running."
+fi 
