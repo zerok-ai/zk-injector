@@ -15,9 +15,25 @@ echo
 echo 
 echo "PWD:"
 pwd
+echo "ls:zerok"
+ls /opt/zerok/
 echo "ls:"
 ls
 
-if [["$0" == *"java"*]]; then
-   echo "java program running."
-fi 
+echo "--------------------"
+
+final_cmd=""
+agent_options="-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar"
+
+for var in "$@"
+do
+    final_cmd="$final_cmd $var"
+    if [[ $var == "java" ]]
+    then
+        final_cmd="$final_cmd $agent_options"
+    fi
+done
+
+echo $final_cmd
+
+eval $final_cmd

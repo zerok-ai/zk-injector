@@ -137,7 +137,7 @@ func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 		addArgs := map[string]interface{}{
 			"op":    "add",
 			"path":  "/spec/containers/" + strconv.Itoa(i) + "/args",
-			"value": []string{"-c", "/opt/zerok/zerok-agent.sh", strings.Join(podCmd, " ")},
+			"value": []string{"-c", "/opt/zerok/zerok-agent.sh " + strings.Join(podCmd, " ")},
 		}
 
 		p = append(p, addArgs)
