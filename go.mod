@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/docker/docker v20.10.22+incompatible
-	github.com/onsi/ginkgo/v2 v2.4.0
 	k8s.io/api v0.26.0
 	k8s.io/apimachinery v0.26.0
 	k8s.io/client-go v0.26.0

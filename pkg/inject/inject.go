@@ -1,5 +1,3 @@
-// Package mutate deals with AdmissionReview requests and responses, it takes in the request body and returns a readily converted JSON []byte that can be
-// returned from a http Handler w/o needing to further convert or modify it, it also makes testing Mutate() kind of easy w/o need for a fake http server, etc.
 package inject
 
 import (
@@ -17,8 +15,6 @@ import (
 )
 
 func Inject(body []byte) ([]byte, error) {
-	log.Printf("recv: %s\n", string(body)) // untested section
-
 	admissionReview := v1.AdmissionReview{}
 	if err := json.Unmarshal(body, &admissionReview); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
@@ -107,8 +103,7 @@ func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
 	containers := pod.Spec.Containers
 
-	for i, _ := range containers {
-		//podCmd := pod.Spec.Containers[i].Command
+	for i := range containers {
 
 		authConfig, err := zkclient.GetAuthDetailsFromSecret(secrets, pod.Namespace, pod.Spec.Containers[i].Image)
 
