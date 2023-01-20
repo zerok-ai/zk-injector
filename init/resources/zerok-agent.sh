@@ -28,7 +28,7 @@ agent_options="-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.javaagen
 for var in "$@"
 do
     final_cmd="$final_cmd $var"
-    if [[ $var == "java" ]]
+    if [ "$var" = "java" ]
     then
         final_cmd="$final_cmd $agent_options"
     fi
