@@ -14,6 +14,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
+	ar := admissionReview.Request
+	if ar != nil {
+		admissionResponse := v1.AdmissionResponse{}
+		admissionResponse.UID = ar.UID
+		admissionResponse.Allowed = true
+		patchType := v1.PatchTypeJSONPatch
+		admissionResponse.PatchType = &patchType
+		patches := make([]map[string]interface{}, 0)
+		admissionResponse.Patch, _ = json.Marshal(patches)
+		admissionResponse.Result = &metav1.Status{
+			Status: "Success",
+		}
+		admissionReview.Response = &admissionResponse
+		responseBody, err := json.Marshal(admissionReview)
+		if err != nil {
+			return nil, fmt.Errorf("error caught while marshalling response %v", err)
+		}
+		return responseBody, nil
+	}
+	return nil, fmt.Errorf("empty admission request")
+}
+
 func Inject(body []byte) ([]byte, error) {
 	admissionReview := v1.AdmissionReview{}
 	if err := json.Unmarshal(body, &admissionReview); err != nil {
@@ -26,6 +49,7 @@ func Inject(body []byte) ([]byte, error) {
 	responseBody := []byte{}
 	ar := admissionReview.Request
 	admissionResponse := v1.AdmissionResponse{}
+	emptyResponse, _ := GetEmptyResponse(admissionReview)
 
 	if ar != nil {
 
@@ -42,7 +66,7 @@ func Inject(body []byte) ([]byte, error) {
 		patches, err := getPatches(pod)
 		if err != nil {
 			fmt.Printf("Error caught while getting the patches %v.\n", err)
-			return nil, err
+			return emptyResponse, err
 		}
 		admissionResponse.Patch, err = json.Marshal(patches)
 
@@ -50,7 +74,7 @@ func Inject(body []byte) ([]byte, error) {
 
 		if err != nil {
 			fmt.Printf("Error caught while marshalling the patches %v.\n", err)
-			return nil, err
+			return emptyResponse, err
 		}
 
 		admissionResponse.Result = &metav1.Status{
@@ -61,7 +85,7 @@ func Inject(body []byte) ([]byte, error) {
 
 		responseBody, err = json.Marshal(admissionReview)
 		if err != nil {
-			return nil, err
+			return emptyResponse, err
 		}
 	}
 

@@ -54,15 +54,15 @@ func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modified, err := inject.Inject(body)
+	response, err := inject.Inject(body)
 
 	if err != nil {
-		errorResponse(err, w)
-		return
+		fmt.Printf("Error while injecting zk agent %v\n", err)
 	}
 
+	// Sending http status as OK, even when injection failed to not disturb the pods in cluster.
 	w.WriteHeader(http.StatusOK)
-	w.Write(modified)
+	w.Write(response)
 
 	r.Body.Close()
 }
