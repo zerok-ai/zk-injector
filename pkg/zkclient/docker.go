@@ -31,15 +31,22 @@ func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, 
 		imagePullOptions = types.ImagePullOptions{}
 	}
 
-	reader, _ = dockerClient.ImagePull(ctx, image, imagePullOptions)
+	reader, err := dockerClient.ImagePull(ctx, image, imagePullOptions)
 
-	defer reader.Close()
+	if err != nil {
+		fmt.Println("Error while pulling the docker image ", err)
+		return []string{}, fmt.Errorf("error caught while pulling the image: %v, Error is: %v", image, err)
+	}
 
 	io.ReadAll(reader)
 
 	if reader != nil {
 		fmt.Println("Pulled the docker image ", image)
+	} else {
+		return []string{}, fmt.Errorf("image is empty: %v", image)
 	}
+
+	defer reader.Close()
 
 	imageInspect, _, err := dockerClient.ImageInspectWithRaw(ctx, image)
 

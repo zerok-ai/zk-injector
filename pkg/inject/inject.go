@@ -20,7 +20,7 @@ func Inject(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
 	}
 
-	var err error
+	//var err error
 	var pod *corev1.Pod
 
 	responseBody := []byte{}
@@ -39,13 +39,18 @@ func Inject(body []byte) ([]byte, error) {
 		patchType := v1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 
-		patches := getPatches(pod)
+		patches, err := getPatches(pod)
+		if err != nil {
+			fmt.Printf("Error caught while getting the patches %v.\n", err)
+			return nil, err
+		}
 		admissionResponse.Patch, err = json.Marshal(patches)
 
 		fmt.Printf("The patches are %v\n", patches)
 
 		if err != nil {
 			fmt.Printf("Error caught while marshalling the patches %v.\n", err)
+			return nil, err
 		}
 
 		admissionResponse.Result = &metav1.Status{
@@ -65,14 +70,17 @@ func Inject(body []byte) ([]byte, error) {
 	return responseBody, nil
 }
 
-func getPatches(pod *corev1.Pod) []map[string]interface{} {
+func getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 	p := make([]map[string]interface{}, 0)
 	p = append(p, getInitContainerPatches(pod)...)
 	p = append(p, getVolumePatch()...)
-	containerPatches, _ := getContainerPatches(pod)
+	containerPatches, err := getContainerPatches(pod)
+	if err != nil {
+		return make([]map[string]interface{}, 0), err
+	}
 	p = append(p, containerPatches...)
 	fmt.Printf("The patches created are %v.\n", p)
-	return p
+	return p, nil
 }
 
 func getPatchCmdForContainer(container *corev1.Container, authConfig *types.AuthConfig) ([]string, error) {
