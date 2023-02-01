@@ -128,6 +128,34 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 	fmt.Printf("Creating or updating the mutatingwebhookconfiguration\n")
 	fail := admissionregistrationv1.Fail
 	sideEffect := admissionregistrationv1.SideEffectClassNone
+	mutatingWebhookConfig := createMutatingWebhook(sideEffect, caPEM, webhookService, webhookNamespace, fail)
+
+	existingWebhookConfig, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Get(context.TODO(), webhookName, metav1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Create(context.TODO(), mutatingWebhookConfig, metav1.CreateOptions{}); err != nil {
+			fmt.Printf("Failed to create the mutatingwebhookconfiguration: %s\n", webhookName)
+			return err
+		}
+		fmt.Printf("Created mutatingwebhookconfiguration: %s\n", webhookName)
+	} else if err != nil {
+		fmt.Printf("Failed to check the mutatingwebhookconfiguration: %s\n", webhookName)
+		fmt.Printf("The error is %v\n", err.Error())
+		return err
+	} else if !areWebHooksSame(existingWebhookConfig, mutatingWebhookConfig) {
+		mutatingWebhookConfig.ObjectMeta.ResourceVersion = existingWebhookConfig.ObjectMeta.ResourceVersion
+		if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Update(context.TODO(), mutatingWebhookConfig, metav1.UpdateOptions{}); err != nil {
+			fmt.Printf("Failed to update the mutatingwebhookconfiguration: %s", webhookName)
+			return err
+		}
+		fmt.Printf("Updated the mutatingwebhookconfiguration: %s\n", webhookName)
+	} else {
+		fmt.Printf("The mutatingwebhookconfiguration: %s already exists and has no change\n", webhookName)
+	}
+
+	return nil
+}
+
+func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, caPEM *bytes.Buffer, webhookService string, webhookNamespace string, fail admissionregistrationv1.FailurePolicyType) *admissionregistrationv1.MutatingWebhookConfiguration {
 	mutatingWebhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: webhookName,
@@ -165,30 +193,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 			FailurePolicy: &fail,
 		}},
 	}
-
-	existingWebhookConfig, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Get(context.TODO(), webhookName, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Create(context.TODO(), mutatingWebhookConfig, metav1.CreateOptions{}); err != nil {
-			fmt.Printf("Failed to create the mutatingwebhookconfiguration: %s\n", webhookName)
-			return err
-		}
-		fmt.Printf("Created mutatingwebhookconfiguration: %s\n", webhookName)
-	} else if err != nil {
-		fmt.Printf("Failed to check the mutatingwebhookconfiguration: %s\n", webhookName)
-		fmt.Printf("The error is %v\n", err.Error())
-		return err
-	} else if !areWebHooksSame(existingWebhookConfig, mutatingWebhookConfig) {
-		mutatingWebhookConfig.ObjectMeta.ResourceVersion = existingWebhookConfig.ObjectMeta.ResourceVersion
-		if _, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Update(context.TODO(), mutatingWebhookConfig, metav1.UpdateOptions{}); err != nil {
-			fmt.Printf("Failed to update the mutatingwebhookconfiguration: %s", webhookName)
-			return err
-		}
-		fmt.Printf("Updated the mutatingwebhookconfiguration: %s\n", webhookName)
-	} else {
-		fmt.Printf("The mutatingwebhookconfiguration: %s already exists and has no change\n", webhookName)
-	}
-
-	return nil
+	return mutatingWebhookConfig
 }
 
 func areWebHooksSame(foundWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, mutatingWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration) bool {

@@ -42,9 +42,13 @@ func GetAuthDetailsFromSecret(names []string, namespace string, image string) (*
 
 		authValuesMap := dockerConfigMap[authsKey].(map[string]interface{})
 
+		//fmt.Printf("Auth values map is %v", authValuesMap)
+
 		for key, value := range authValuesMap {
 			if strings.Contains(image, key) {
 				//found the values for the image
+				fmt.Printf("Value found for key %v\n", key)
+				fmt.Printf("Value for key is %v\n", value)
 				valueMap := value.(map[string]interface{})
 				username, uok := valueMap["username"]
 				passwd, passok := valueMap["password"]
@@ -52,6 +56,14 @@ func GetAuthDetailsFromSecret(names []string, namespace string, image string) (*
 					authConfig = &types.AuthConfig{
 						Username: username.(string),
 						Password: passwd.(string),
+					}
+				} else {
+					auth, ok := valueMap["auth"]
+					if ok {
+						fmt.Printf("Auth found for key %v\n", key)
+						authConfig = &types.AuthConfig{
+							Auth: auth.(string),
+						}
 					}
 				}
 				break
