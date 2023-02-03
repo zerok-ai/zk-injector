@@ -18,20 +18,48 @@ type DockerImageDownloader struct {
 	DownloadCompMap sync.Map
 }
 
-func (h *DockerImageDownloader) isImageDownloadInProgress(image string) bool {
-	_, ok := h.DownloadCompMap.Load(image)
-	return ok
+func (h *DockerImageDownloader) downloadImage(authConfig *types.AuthConfig, dockerClient *client.Client, image string) error {
+
+	//TODO: Add a mutex here to avoid multithreading.
+	value, ok := h.DownloadCompMap.Load(image)
+
+	if ok {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		switch y := value.(type) {
+		case []*sync.WaitGroup:
+			y = append(y, &wg)
+			h.DownloadCompMap.Store(image, y)
+		default:
+			panic("Error in image downloadere.")
+		}
+		wg.Wait()
+	} else {
+		var a []*sync.WaitGroup
+		h.DownloadCompMap.Store(image, a)
+		err := h.pullImage(authConfig, dockerClient, image)
+		h.closeWaitGroups(image)
+		return err
+	}
+	return nil
 }
 
-func (h *DockerImageDownloader) addImage(image string) {
-	h.DownloadCompMap.Store(image, true)
-}
-
-func (h *DockerImageDownloader) removeImage(image string) {
+func (h *DockerImageDownloader) closeWaitGroups(image string) {
+	value, ok := h.DownloadCompMap.Load(image)
+	if ok {
+		switch y := value.(type) {
+		case []*sync.WaitGroup:
+			for _, wg := range y {
+				wg.Done()
+			}
+		default:
+			panic("Error in image downloadere.")
+		}
+	}
 	h.DownloadCompMap.Delete(image)
 }
 
-func (h *DockerImageDownloader) downloadImage(authConfig *types.AuthConfig, dockerClient *client.Client, image string) error {
+func (h *DockerImageDownloader) pullImage(authConfig *types.AuthConfig, dockerClient *client.Client, image string) error {
 	var reader io.ReadCloser
 	defer reader.Close()
 	var imagePullOptions types.ImagePullOptions
@@ -69,11 +97,6 @@ func (h *DockerImageDownloader) downloadImage(authConfig *types.AuthConfig, dock
 func GetCommandFromImage(image string, authConfig *types.AuthConfig, h *DockerImageDownloader) ([]string, error) {
 
 	fmt.Println("New code is running for docker download.")
-	if h.isImageDownloadInProgress(image) {
-		return []string{}, fmt.Errorf("image %v download is already in progress", image)
-	}
-
-	h.addImage(image)
 
 	start := time.Now()
 	fmt.Println("Started pulling the docker image ", image, " at time ", start.String())
@@ -81,8 +104,6 @@ func GetCommandFromImage(image string, authConfig *types.AuthConfig, h *DockerIm
 	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
 	err := h.downloadImage(authConfig, dockerClient, image)
-
-	h.removeImage(image)
 
 	if err != nil {
 		return []string{}, fmt.Errorf("image is empty: %v", image)
