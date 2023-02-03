@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/zerok-ai/zerok-injector/pkg/inject"
-	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,20 +32,8 @@ var (
 	webhookServiceName = "zk-injector"
 )
 
-func defaultHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Request received at Path %q\n", r.URL.Path)
-	image := "cloud.canister.io:5000/rajeevr47/zk-injector"
-	authConfig, _ := zkclient.GetAuthDetailsFromSecret([]string{"dockerkey"}, "default", image)
-	existingCmd, err := zkclient.GetCommandFromImage(image, authConfig)
-	if err != nil {
-		fmt.Println("Error while getting patch command for image: ", image)
-	} else {
-		fmt.Println("Existing cmd is ", existingCmd)
-	}
-}
-
 func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Request recevied.\n")
+	//fmt.Printf("Request recevied.\n")
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
@@ -98,7 +85,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", defaultHandler)
 	mux.HandleFunc("/zk-injector", injectRequestHandler)
 
 	s := &http.Server{
@@ -156,6 +142,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 }
 
 func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, caPEM *bytes.Buffer, webhookService string, webhookNamespace string, fail admissionregistrationv1.FailurePolicyType) *admissionregistrationv1.MutatingWebhookConfiguration {
+	timeOut := int32(30)
 	mutatingWebhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: webhookName,
@@ -164,6 +151,7 @@ func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, c
 			Name:                    "zk-webhook.zerok.ai",
 			AdmissionReviewVersions: []string{"v1"},
 			SideEffects:             &sideEffect,
+			TimeoutSeconds:          &timeOut,
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
 				CABundle: caPEM.Bytes(),
 				Service: &admissionregistrationv1.ServiceReference{

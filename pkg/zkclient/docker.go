@@ -12,9 +12,10 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, error) {
+func GetCommandFromImage(image string, authConfig *types.AuthConfig, uid string) ([]string, error) {
 
 	start := time.Now()
+	fmt.Println("Started pulling the docker image ", image, "with uid ", uid, " at time ", start.String())
 	ctx := context.TODO()
 	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
@@ -44,7 +45,7 @@ func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, 
 	io.ReadAll(reader)
 
 	if reader != nil {
-		fmt.Println("Pulled the docker image ", image)
+		fmt.Println("Pulled the docker image ", image, "with uid ", uid)
 	} else {
 		return []string{}, fmt.Errorf("image is empty: %v", image)
 	}
@@ -59,7 +60,7 @@ func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, 
 	}
 
 	elapsed := time.Since(start)
-	fmt.Printf("getting command took %v.\n", int64(elapsed/time.Second))
+	fmt.Printf("getting command took %v for request %v.\n", int64(elapsed/time.Second), uid)
 
 	return imageInspect.Config.Cmd, nil
 }
