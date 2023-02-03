@@ -61,7 +61,7 @@ func (h *DockerImageDownloader) closeWaitGroups(image string) {
 
 func (h *DockerImageDownloader) pullImage(authConfig *types.AuthConfig, dockerClient *client.Client, image string) error {
 	var reader io.ReadCloser
-	defer reader.Close()
+
 	var imagePullOptions types.ImagePullOptions
 	ctx := context.TODO()
 
@@ -88,6 +88,7 @@ func (h *DockerImageDownloader) pullImage(authConfig *types.AuthConfig, dockerCl
 
 	if reader != nil {
 		fmt.Println("Pulled the docker image ", image)
+		reader.Close()
 	} else {
 		return fmt.Errorf("image is empty: %v", image)
 	}
