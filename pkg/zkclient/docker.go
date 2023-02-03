@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
 
 func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, error) {
+
+	start := time.Now()
 	ctx := context.TODO()
 	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
@@ -54,6 +57,9 @@ func GetCommandFromImage(image string, authConfig *types.AuthConfig) ([]string, 
 		fmt.Println("Error caught while getting cmd from image: ", image, ", Error is: ", err)
 		return []string{}, fmt.Errorf("error caught while getting cmd from image: %v, Error is: %v", image, err)
 	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("getting command took %v.\n", int64(elapsed/time.Second))
 
 	return imageInspect.Config.Cmd, nil
 }
