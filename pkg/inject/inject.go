@@ -38,7 +38,7 @@ func GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
 	return nil, fmt.Errorf("empty admission request")
 }
 
-func Inject(body []byte) ([]byte, error) {
+func Inject(body []byte, imageDownloader *zkclient.DockerImageDownloader) ([]byte, error) {
 	admissionReview := v1.AdmissionReview{}
 	if err := json.Unmarshal(body, &admissionReview); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
@@ -67,7 +67,7 @@ func Inject(body []byte) ([]byte, error) {
 		patchType := v1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 
-		patches, err := getPatches(pod, string(ar.UID))
+		patches, err := getPatches(pod, imageDownloader)
 		if err != nil {
 			fmt.Printf("Error caught while getting the patches %v.\n", err)
 			return emptyResponse, err
@@ -98,11 +98,11 @@ func Inject(body []byte) ([]byte, error) {
 	return responseBody, nil
 }
 
-func getPatches(pod *corev1.Pod, uid string) ([]map[string]interface{}, error) {
+func getPatches(pod *corev1.Pod, imageDownloader *zkclient.DockerImageDownloader) ([]map[string]interface{}, error) {
 	p := make([]map[string]interface{}, 0)
 	p = append(p, getInitContainerPatches(pod)...)
 	p = append(p, getVolumePatch()...)
-	containerPatches, err := getContainerPatches(pod, uid)
+	containerPatches, err := getContainerPatches(pod, imageDownloader)
 	if err != nil {
 		return make([]map[string]interface{}, 0), err
 	}
@@ -111,12 +111,12 @@ func getPatches(pod *corev1.Pod, uid string) ([]map[string]interface{}, error) {
 	return p, nil
 }
 
-func getPatchCmdForContainer(container *corev1.Container, authConfig *types.AuthConfig, uid string) ([]string, error) {
+func getPatchCmdForContainer(container *corev1.Container, authConfig *types.AuthConfig, imageDownloader *zkclient.DockerImageDownloader) ([]string, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
 		return []string{}, fmt.Errorf("container is nil")
 	}
-	existingCmd, err := zkclient.GetCommandFromImage(container.Image, authConfig, uid)
+	existingCmd, err := zkclient.GetCommandFromImage(container.Image, authConfig, imageDownloader)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
 		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
@@ -125,7 +125,7 @@ func getPatchCmdForContainer(container *corev1.Container, authConfig *types.Auth
 	return existingCmd, nil
 }
 
-func getContainerPatches(pod *corev1.Pod, uid string) ([]map[string]interface{}, error) {
+func getContainerPatches(pod *corev1.Pod, imageDownloader *zkclient.DockerImageDownloader) ([]map[string]interface{}, error) {
 
 	imagePullSecrets := &pod.Spec.ImagePullSecrets
 
@@ -149,7 +149,7 @@ func getContainerPatches(pod *corev1.Pod, uid string) ([]map[string]interface{},
 
 		}
 
-		podCmd, err := getPatchCmdForContainer(&pod.Spec.Containers[i], authConfig, uid)
+		podCmd, err := getPatchCmdForContainer(&pod.Spec.Containers[i], authConfig, imageDownloader)
 
 		if err != nil {
 			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)

@@ -15,9 +15,11 @@ import (
 	"math/big"
 	"net/http"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/zerok-ai/zerok-injector/pkg/inject"
+	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +34,11 @@ var (
 	webhookServiceName = "zk-injector"
 )
 
-func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
+type InjectHandler struct {
+	imageDownloader *zkclient.DockerImageDownloader
+}
+
+func (h *InjectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//fmt.Printf("Request recevied.\n")
 	body, err := io.ReadAll(r.Body)
 
@@ -41,7 +47,7 @@ func injectRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := inject.Inject(body)
+	response, err := inject.Inject(body, h.imageDownloader)
 
 	if err != nil {
 		fmt.Printf("Error while injecting zk agent %v\n", err)
@@ -85,7 +91,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/zk-injector", injectRequestHandler)
+	mux.Handle("/zk-injector", &InjectHandler{imageDownloader: &zkclient.DockerImageDownloader{DownloadCompMap: sync.Map{}}})
 
 	s := &http.Server{
 		Addr:           ":8443",
