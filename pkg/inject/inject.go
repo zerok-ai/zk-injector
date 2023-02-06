@@ -220,7 +220,7 @@ func (h *Injector) getInitContainerPatches(pod *corev1.Pod) []map[string]interfa
 		"value": &corev1.Container{
 			Name:            "zerok-init",
 			Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
-			Image:           "rajeevzerok/init-container:latest",
+			Image:           "us-west1-docker.pkg.dev/zerok-dev/stage/init-container:latest",
 			ImagePullPolicy: corev1.PullAlways,
 			VolumeMounts: []corev1.VolumeMount{
 				{

@@ -28,10 +28,10 @@ import (
 )
 
 var (
-	webhookName        = "zk-webhook"
+	webhookName        = "zerok-webhook"
 	webhookPath        = "/zk-injector"
-	webhookNamespace   = "zk-injector"
-	webhookServiceName = "zk-injector"
+	webhookNamespace   = "zerok-injector"
+	webhookServiceName = "zerok-injector"
 )
 
 type HttpApiHandler struct {

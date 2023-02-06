@@ -1,6 +1,6 @@
-NAME = zk-injector
-IMAGE_PREFIX = rajeevzerok
-IMAGE_NAME = zk-injector
+NAME = zerok-injector
+IMAGE_PREFIX = us-west1-docker.pkg.dev/zerok-dev/stage
+IMAGE_NAME = zerok-injector
 IMAGE_VERSION = tmp
 
 export GO111MODULE=on
