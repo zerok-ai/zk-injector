@@ -1,7 +1,7 @@
 NAME = zk-injector
 IMAGE_PREFIX = rajeevzerok
 IMAGE_NAME = zk-injector
-IMAGE_VERSION = latest
+IMAGE_VERSION = tmp
 
 export GO111MODULE=on
 
