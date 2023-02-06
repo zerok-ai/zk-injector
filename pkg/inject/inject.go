@@ -18,7 +18,7 @@ type Injector struct {
 	imageDownloadTracker *zkclient.ImageDownloadTracker
 }
 
-func GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
+func (h *Injector) GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
 	ar := admissionReview.Request
 	if ar != nil {
 		admissionResponse := v1.AdmissionResponse{}
@@ -41,7 +41,7 @@ func GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
 	return nil, fmt.Errorf("empty admission request")
 }
 
-func Inject(body []byte) ([]byte, error) {
+func (h *Injector) Inject(body []byte) ([]byte, error) {
 	admissionReview := v1.AdmissionReview{}
 	if err := json.Unmarshal(body, &admissionReview); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
@@ -53,7 +53,7 @@ func Inject(body []byte) ([]byte, error) {
 	responseBody := []byte{}
 	ar := admissionReview.Request
 	admissionResponse := v1.AdmissionResponse{}
-	emptyResponse, _ := GetEmptyResponse(admissionReview)
+	emptyResponse, _ := h.GetEmptyResponse(admissionReview)
 
 	if ar != nil {
 
@@ -70,7 +70,7 @@ func Inject(body []byte) ([]byte, error) {
 		patchType := v1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 
-		patches, err := getPatches(pod)
+		patches, err := h.getPatches(pod)
 		if err != nil {
 			fmt.Printf("Error caught while getting the patches %v.\n", err)
 			return emptyResponse, err
@@ -101,11 +101,11 @@ func Inject(body []byte) ([]byte, error) {
 	return responseBody, nil
 }
 
-func getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
+func (h *Injector) getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 	p := make([]map[string]interface{}, 0)
-	p = append(p, getInitContainerPatches(pod)...)
-	p = append(p, getVolumePatch()...)
-	containerPatches, err := getContainerPatches(pod)
+	p = append(p, h.getInitContainerPatches(pod)...)
+	p = append(p, h.getVolumePatch()...)
+	containerPatches, err := h.getContainerPatches(pod)
 	if err != nil {
 		return make([]map[string]interface{}, 0), err
 	}
@@ -114,7 +114,7 @@ func getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 	return p, nil
 }
 
-func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
+func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
 	p := make([]map[string]interface{}, 0)
 
@@ -128,7 +128,7 @@ func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
 		imageHandler := zkclient.GetImageHandler(imageType)
 
-		podCmd, err := getPatchCmdForContainer(container, pod, &imageHandler)
+		podCmd, err := h.getPatchCmdForContainer(container, pod, &imageHandler)
 
 		if err != nil {
 			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
@@ -168,12 +168,12 @@ func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 	return p, nil
 }
 
-func getPatchCmdForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]string, error) {
+func (h *Injector) getPatchCmdForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]string, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
 		return []string{}, fmt.Errorf("container is nil")
 	}
-	existingCmd, err := (*imageHandler).GetCommandFromImage(container.Image, pod, nil, imageHandler)
+	existingCmd, err := (*imageHandler).GetCommandFromImage(container.Image, pod, h.imageDownloadTracker)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
 		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
@@ -182,7 +182,7 @@ func getPatchCmdForContainer(container *corev1.Container, pod *corev1.Pod, image
 	return existingCmd, nil
 }
 
-func getVolumePatch() []map[string]interface{} {
+func (h *Injector) getVolumePatch() []map[string]interface{} {
 	p := make([]map[string]interface{}, 0)
 
 	addVolume := map[string]interface{}{
@@ -201,7 +201,7 @@ func getVolumePatch() []map[string]interface{} {
 	return p
 }
 
-func getInitContainerPatches(pod *corev1.Pod) []map[string]interface{} {
+func (h *Injector) getInitContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 	p := make([]map[string]interface{}, 0)
 
 	if pod.Spec.InitContainers == nil {

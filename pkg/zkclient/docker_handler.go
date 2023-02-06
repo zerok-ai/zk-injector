@@ -68,17 +68,18 @@ func (h *DockerImageHandler) pullImage(image string, pod *corev1.Pod) error {
 	return nil
 }
 
-func (h *DockerImageHandler) GetCommandFromImage(image string, pod *corev1.Pod, tracker *ImageDownloadTracker, handler *ImageHandlerInterface) ([]string, error) {
+func (h *DockerImageHandler) GetCommandFromImage(image string, pod *corev1.Pod, tracker *ImageDownloadTracker) ([]string, error) {
 	ctx := context.TODO()
-	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
-	err := tracker.downloadImage(image, pod, handler)
+	var inter ImageHandlerInterface = h
+
+	err := tracker.downloadImage(image, pod, &inter)
 
 	if err != nil {
 		return []string{}, fmt.Errorf("image is empty: %v", image)
 	}
 
-	imageInspect, _, err := dockerClient.ImageInspectWithRaw(ctx, image)
+	imageInspect, _, err := h.dockerClient.ImageInspectWithRaw(ctx, image)
 
 	if err != nil {
 		fmt.Println("Error caught while getting cmd from image: ", image, ", Error is: ", err)
