@@ -35,7 +35,7 @@ var (
 )
 
 type InjectHandler struct {
-	imageDownloader *zkclient.DockerImageDownloader
+	injector *inject.Injector
 }
 
 func (h *InjectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +47,7 @@ func (h *InjectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := inject.Inject(body, h.imageDownloader)
+	response, err := h.injector.Inject(body)
 
 	if err != nil {
 		fmt.Printf("Error while injecting zk agent %v\n", err)
@@ -90,8 +90,13 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	tracker := &zkclient.ImageDownloadTracker{DownloadCompMap: sync.Map{}}
 
-	mux.Handle("/zk-injector", &InjectHandler{imageDownloader: &zkclient.DockerImageDownloader{DownloadCompMap: sync.Map{}}})
+	injectHandler := &InjectHandler{
+		injector: &inject.Injector{ImageDownloadTracker: tracker},
+	}
+
+	mux.Handle("/zk-injector", injectHandler)
 
 	s := &http.Server{
 		Addr:           ":8443",

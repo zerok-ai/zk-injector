@@ -15,7 +15,7 @@ import (
 )
 
 type Injector struct {
-	imageDownloadTracker *zkclient.ImageDownloadTracker
+	ImageDownloadTracker *zkclient.ImageDownloadTracker
 }
 
 func (h *Injector) GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
@@ -173,7 +173,7 @@ func (h *Injector) getPatchCmdForContainer(container *corev1.Container, pod *cor
 		fmt.Println("Container is nil.")
 		return []string{}, fmt.Errorf("container is nil")
 	}
-	existingCmd, err := (*imageHandler).GetCommandFromImage(container.Image, pod, h.imageDownloadTracker)
+	existingCmd, err := (*imageHandler).GetCommandFromImage(container.Image, pod, h.ImageDownloadTracker)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
 		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
