@@ -11,7 +11,11 @@ var (
 	authsKey        string = "auths"
 )
 
-func getImagePullSecret(pod *corev1.Pod) []string {
+func GetImageType(image string) ImageType {
+	return Docker
+}
+
+func GetImagePullSecrets(pod *corev1.Pod) []string {
 	imagePullSecrets := &pod.Spec.ImagePullSecrets
 
 	var secrets []string = []string{}

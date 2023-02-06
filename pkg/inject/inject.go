@@ -14,6 +14,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type Injector struct {
+	imageDownloadTracker *zkclient.ImageDownloadTracker
+}
+
 func GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
 	ar := admissionReview.Request
 	if ar != nil {
@@ -37,7 +41,7 @@ func GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
 	return nil, fmt.Errorf("empty admission request")
 }
 
-func Inject(body []byte, imageHandler *zkclient.ImageHandlerInterface) ([]byte, error) {
+func Inject(body []byte) ([]byte, error) {
 	admissionReview := v1.AdmissionReview{}
 	if err := json.Unmarshal(body, &admissionReview); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
@@ -66,7 +70,7 @@ func Inject(body []byte, imageHandler *zkclient.ImageHandlerInterface) ([]byte, 
 		patchType := v1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 
-		patches, err := getPatches(pod, imageHandler)
+		patches, err := getPatches(pod)
 		if err != nil {
 			fmt.Printf("Error caught while getting the patches %v.\n", err)
 			return emptyResponse, err
@@ -97,11 +101,11 @@ func Inject(body []byte, imageHandler *zkclient.ImageHandlerInterface) ([]byte, 
 	return responseBody, nil
 }
 
-func getPatches(pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]map[string]interface{}, error) {
+func getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 	p := make([]map[string]interface{}, 0)
 	p = append(p, getInitContainerPatches(pod)...)
 	p = append(p, getVolumePatch()...)
-	containerPatches, err := getContainerPatches(pod, imageHandler)
+	containerPatches, err := getContainerPatches(pod)
 	if err != nil {
 		return make([]map[string]interface{}, 0), err
 	}
@@ -110,21 +114,7 @@ func getPatches(pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) (
 	return p, nil
 }
 
-func getPatchCmdForContainer(container *corev1.Container, imageHandler *zkclient.ImageHandlerInterface) ([]string, error) {
-	if container == nil {
-		fmt.Println("Container is nil.")
-		return []string{}, fmt.Errorf("container is nil")
-	}
-	existingCmd, err := (*imageHandler).GetCommandFromImage(container.Image, imageHandler)
-	if err != nil {
-		fmt.Println("Error while getting patch command for image: ", container.Image)
-		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
-	}
-	fmt.Println("Exiting cmd for container ", container.Name, " is ", existingCmd)
-	return existingCmd, nil
-}
-
-func getContainerPatches(pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]map[string]interface{}, error) {
+func getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
 	p := make([]map[string]interface{}, 0)
 
@@ -132,15 +122,13 @@ func getContainerPatches(pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInt
 
 	for i := range containers {
 
-		authConfig, err := zkclient.GetAuthDetailsFromSecret(pod)
+		container := &pod.Spec.Containers[i]
 
-		if err != nil {
-			fmt.Printf("Error caught while getting auth config %v for container %v.\n", err, i)
-			return p, fmt.Errorf("error caught while getting auth config %v", err)
+		imageType := zkclient.GetImageType(container.Image)
 
-		}
+		imageHandler := zkclient.GetImageHandler(imageType)
 
-		podCmd, err := getPatchCmdForContainer(&pod.Spec.Containers[i], authConfig, imageHandler)
+		podCmd, err := getPatchCmdForContainer(container, pod, &imageHandler)
 
 		if err != nil {
 			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
@@ -178,6 +166,20 @@ func getContainerPatches(pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInt
 	}
 
 	return p, nil
+}
+
+func getPatchCmdForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]string, error) {
+	if container == nil {
+		fmt.Println("Container is nil.")
+		return []string{}, fmt.Errorf("container is nil")
+	}
+	existingCmd, err := (*imageHandler).GetCommandFromImage(container.Image, pod, nil, imageHandler)
+	if err != nil {
+		fmt.Println("Error while getting patch command for image: ", container.Image)
+		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
+	}
+	fmt.Println("Exiting cmd for container ", container.Name, " is ", existingCmd)
+	return existingCmd, nil
 }
 
 func getVolumePatch() []map[string]interface{} {

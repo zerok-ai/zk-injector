@@ -3,15 +3,17 @@ package zkclient
 import (
 	"fmt"
 	"sync"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Map will have image string and list of wait groups.
 
-type ImageDownloadHandler struct {
+type ImageDownloadTracker struct {
 	DownloadCompMap sync.Map
 }
 
-func (h *ImageDownloadHandler) downloadImage(image string, imageHandler *ImageHandlerInterface) error {
+func (h *ImageDownloadTracker) downloadImage(image string, pod *corev1.Pod, imageHandler *ImageHandlerInterface) error {
 	fmt.Println("Download Image method called for image ", image)
 
 	//TODO: Add a mutex here to avoid multithreading.
@@ -34,14 +36,14 @@ func (h *ImageDownloadHandler) downloadImage(image string, imageHandler *ImageHa
 		var a []*sync.WaitGroup
 		h.DownloadCompMap.Store(image, a)
 		fmt.Println("First Image so pull image initiated.")
-		err := (*imageHandler).pullImage(image)
+		err := (*imageHandler).pullImage(image, pod)
 		h.closeWaitGroups(image)
 		return err
 	}
 	return nil
 }
 
-func (h *ImageDownloadHandler) closeWaitGroups(image string) {
+func (h *ImageDownloadTracker) closeWaitGroups(image string) {
 	fmt.Println("CloseWaitGroups method called.")
 	value, ok := h.DownloadCompMap.Load(image)
 	if ok {

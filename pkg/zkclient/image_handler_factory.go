@@ -1,6 +1,6 @@
 package zkclient
 
-func getImageHandler(imageType ImageType) ImageHandlerInterface {
+func GetImageHandler(imageType ImageType) ImageHandlerInterface {
 	switch imageType {
 	case Docker:
 

@@ -11,24 +11,31 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type DockerImageHandler struct {
-	authConfig   *types.AuthConfig
 	dockerClient *client.Client
 }
 
-func (h *DockerImageHandler) pullImage(image string) error {
+func (h *DockerImageHandler) pullImage(image string, pod *corev1.Pod) error {
 	fmt.Println("Pull image method called.")
 	start := time.Now()
 	var reader io.ReadCloser
 
 	var imagePullOptions types.ImagePullOptions
 	ctx := context.TODO()
+	secrets := GetImagePullSecrets(pod)
 
-	if h.authConfig != nil {
-		encodedJSON, err := json.Marshal(&h.authConfig)
+	authConfig, err := GetAuthDetailsFromSecret(pod, secrets, image)
+
+	if err != nil {
+		fmt.Println(" Error caught while getting auth details for image", image)
+	}
+
+	if authConfig != nil {
+		encodedJSON, err := json.Marshal(&authConfig)
 		if err != nil {
 			fmt.Println("Error while marshalling Auth details")
 			return fmt.Errorf("error while marshalling Auth details for image %v, Error is: %v", image, err)
@@ -39,7 +46,7 @@ func (h *DockerImageHandler) pullImage(image string) error {
 	} else {
 		imagePullOptions = types.ImagePullOptions{}
 	}
-	reader, err := h.dockerClient.ImagePull(ctx, image, imagePullOptions)
+	reader, err = h.dockerClient.ImagePull(ctx, image, imagePullOptions)
 
 	if err != nil {
 		fmt.Println("Error while pulling the docker image ", err)
@@ -61,11 +68,11 @@ func (h *DockerImageHandler) pullImage(image string) error {
 	return nil
 }
 
-func (h *DockerImageHandler) GetCommandFromImage(image string, tracker *ImageDownloadHandler, handler *ImageHandlerInterface) ([]string, error) {
+func (h *DockerImageHandler) GetCommandFromImage(image string, pod *corev1.Pod, tracker *ImageDownloadTracker, handler *ImageHandlerInterface) ([]string, error) {
 	ctx := context.TODO()
 	dockerClient, _ := client.NewClientWithOpts(client.FromEnv)
 
-	err := tracker.downloadImage(image, handler)
+	err := tracker.downloadImage(image, pod, handler)
 
 	if err != nil {
 		return []string{}, fmt.Errorf("image is empty: %v", image)
@@ -81,17 +88,17 @@ func (h *DockerImageHandler) GetCommandFromImage(image string, tracker *ImageDow
 	return imageInspect.Config.Cmd, nil
 }
 
-func GetAuthDetailsFromSecret(secretNames []string, image string) (*types.AuthConfig, error) {
+func GetAuthDetailsFromSecret(pod *corev1.Pod, secretNames []string, image string) (*types.AuthConfig, error) {
 	clientSet := GetK8sClient()
 	listOptions := metav1.GetOptions{}
 	var authConfig *types.AuthConfig
 
-	for _, name := range secretNamesmes {
+	for _, name := range secretNames {
 		secret, err := clientSet.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), name, listOptions)
 
 		if err != nil {
 			fmt.Println("Error caught while getting the secret ", err)
-			return nil, fmt.Errorf("error caught while getting the secret %v in namespace %v", name, namespace)
+			return nil, fmt.Errorf("error caught while getting the secret %v in namespace %v", name, pod.Namespace)
 		}
 
 		dockerConfigBytes := secret.Data[dockerConfigKey]
@@ -101,7 +108,7 @@ func GetAuthDetailsFromSecret(secretNames []string, image string) (*types.AuthCo
 
 		if err != nil {
 			fmt.Println("Error caught while unmarshalling the secret ", err)
-			return nil, fmt.Errorf("error caught while unmarshalling the secret %v in namespace %v", name, namespace)
+			return nil, fmt.Errorf("error caught while unmarshalling the secret %v in namespace %v", name, pod.Namespace)
 		}
 
 		authValuesMap := dockerConfigMap[authsKey].(map[string]interface{})
