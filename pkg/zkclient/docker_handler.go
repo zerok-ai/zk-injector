@@ -28,7 +28,7 @@ func (h *DockerImageHandler) pullImage(image string, pod *corev1.Pod) error {
 	ctx := context.TODO()
 	secrets := GetImagePullSecrets(pod)
 
-	authConfig, err := GetAuthDetailsFromSecret(pod, secrets, image)
+	authConfig, err := h.getAuthDetailsFromSecret(pod, secrets, image)
 
 	if err != nil {
 		fmt.Println(" Error caught while getting auth details for image", image)
@@ -89,7 +89,7 @@ func (h *DockerImageHandler) GetCommandFromImage(image string, pod *corev1.Pod, 
 	return imageInspect.Config.Cmd, nil
 }
 
-func GetAuthDetailsFromSecret(pod *corev1.Pod, secretNames []string, image string) (*types.AuthConfig, error) {
+func (h *DockerImageHandler) getAuthDetailsFromSecret(pod *corev1.Pod, secretNames []string, image string) (*types.AuthConfig, error) {
 	clientSet := GetK8sClient()
 	listOptions := metav1.GetOptions{}
 	var authConfig *types.AuthConfig

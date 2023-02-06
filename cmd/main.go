@@ -34,12 +34,11 @@ var (
 	webhookServiceName = "zk-injector"
 )
 
-type InjectHandler struct {
+type HttpApiHandler struct {
 	injector *inject.Injector
 }
 
-func (h *InjectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//fmt.Printf("Request recevied.\n")
+func (h *HttpApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
@@ -92,7 +91,7 @@ func main() {
 	mux := http.NewServeMux()
 	tracker := &zkclient.ImageDownloadTracker{DownloadCompMap: sync.Map{}}
 
-	injectHandler := &InjectHandler{
+	injectHandler := &HttpApiHandler{
 		injector: &inject.Injector{ImageDownloadTracker: tracker},
 	}
 
