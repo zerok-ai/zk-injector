@@ -1,13 +1,7 @@
 package zkclient
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"strings"
-
-	"github.com/docker/docker/api/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -17,64 +11,15 @@ var (
 	authsKey        string = "auths"
 )
 
-func GetAuthDetailsFromSecret(names []string, namespace string, image string) (*types.AuthConfig, error) {
-	clientSet := GetK8sClient()
-	listOptions := metav1.GetOptions{}
-	var authConfig *types.AuthConfig
+func getImagePullSecret(pod *corev1.Pod) []string {
+	imagePullSecrets := &pod.Spec.ImagePullSecrets
 
-	for _, name := range names {
-		secret, err := clientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, listOptions)
+	var secrets []string = []string{}
 
-		if err != nil {
-			fmt.Println("Error caught while getting the secret ", err)
-			return nil, fmt.Errorf("error caught while getting the secret %v in namespace %v", name, namespace)
-		}
-
-		dockerConfigBytes := secret.Data[dockerConfigKey]
-
-		dockerConfigMap := make(map[string]interface{})
-		err = json.Unmarshal(dockerConfigBytes, &dockerConfigMap)
-
-		if err != nil {
-			fmt.Println("Error caught while unmarshalling the secret ", err)
-			return nil, fmt.Errorf("error caught while unmarshalling the secret %v in namespace %v", name, namespace)
-		}
-
-		authValuesMap := dockerConfigMap[authsKey].(map[string]interface{})
-
-		//fmt.Printf("Auth values map is %v", authValuesMap)
-
-		for key, value := range authValuesMap {
-			if strings.Contains(image, key) {
-				//found the values for the image
-				fmt.Printf("Value found for key %v\n", key)
-				fmt.Printf("Value for key is %v\n", value)
-				valueMap := value.(map[string]interface{})
-				username, uok := valueMap["username"]
-				passwd, passok := valueMap["password"]
-				if uok && passok {
-					authConfig = &types.AuthConfig{
-						Username: username.(string),
-						Password: passwd.(string),
-					}
-				} else {
-					auth, ok := valueMap["auth"]
-					if ok {
-						fmt.Printf("Auth found for key %v\n", key)
-						authConfig = &types.AuthConfig{
-							Auth: auth.(string),
-						}
-					}
-				}
-				break
-			}
-		}
-		if authConfig != nil {
-			break
-		}
+	for _, imagePullSecret := range *imagePullSecrets {
+		secrets = append(secrets, imagePullSecret.Name)
 	}
-
-	return authConfig, nil
+	return secrets
 }
 
 func GetK8sClient() *kubernetes.Clientset {
