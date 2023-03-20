@@ -122,7 +122,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()
 
 	fmt.Printf("Creating or updating the mutatingwebhookconfiguration\n")
-	fail := admissionregistrationv1.Fail
+	fail := admissionregistrationv1.Ignore
 	sideEffect := admissionregistrationv1.SideEffectClassNone
 	mutatingWebhookConfig := createMutatingWebhook(sideEffect, caPEM, webhookService, webhookNamespace, fail)
 
