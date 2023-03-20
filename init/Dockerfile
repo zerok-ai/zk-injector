@@ -1,4 +1,4 @@
-FROM alpine
+FROM --platform=linux/amd64 alpine
 WORKDIR /opt/zerok
 COPY resources/ .
 RUN chmod +x ./zerok-agent.sh
