@@ -173,13 +173,20 @@ func (h *Injector) getPatchCmdForContainer(container *corev1.Container, pod *cor
 		fmt.Println("Container is nil.")
 		return []string{}, fmt.Errorf("container is nil")
 	}
-	existingCmd, err := (*imageHandler).GetCommandFromImage(container.Image, pod, h.ImageDownloadTracker)
+	containerCommand := container.Command
+	args := container.Args
+	containerCommand = append(containerCommand, args...)
+	var err error
+	if len(containerCommand) == 0 {
+		containerCommand, err = (*imageHandler).GetCommandFromImage(container.Image, pod, h.ImageDownloadTracker)
+	}
+	fmt.Println("Container command is ", containerCommand)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
 		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
 	}
-	fmt.Println("Exiting cmd for container ", container.Name, " is ", existingCmd)
-	return existingCmd, nil
+	fmt.Println("Exiting cmd for container ", container.Name, " is ", containerCommand)
+	return containerCommand, nil
 }
 
 func (h *Injector) getVolumePatch() []map[string]interface{} {
