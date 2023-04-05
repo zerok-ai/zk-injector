@@ -147,7 +147,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 		addArgs := map[string]interface{}{
 			"op":    "add",
 			"path":  "/spec/containers/" + strconv.Itoa(i) + "/args",
-			"value": []string{"-c", "/opt/zerok/zerok-agent.sh " + strings.Join(podCmd, " ")},
+			"value": []string{"-c", "/opt/zerok/zerok-agent.sh " + podCmd},
 		}
 
 		p = append(p, addArgs)
@@ -168,25 +168,30 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 	return p, nil
 }
 
-func (h *Injector) getPatchCmdForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]string, error) {
+func (h *Injector) getPatchCmdForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) (string, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
-		return []string{}, fmt.Errorf("container is nil")
+		return "", fmt.Errorf("container is nil")
 	}
 	containerCommand := container.Command
 	args := container.Args
+	for i := 0; i < len(args); i++ {
+		args[i] = strconv.Quote(args[i])
+	}
 	containerCommand = append(containerCommand, args...)
 	var err error
 	if len(containerCommand) == 0 {
 		containerCommand, err = (*imageHandler).GetCommandFromImage(container.Image, pod, h.ImageDownloadTracker)
 	}
 	fmt.Println("Container command is ", containerCommand)
+	combinedCommand := strings.Join(containerCommand[:], " ")
+	combinedCommand = strconv.Quote(combinedCommand)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
-		return []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
+		return "", fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
 	}
-	fmt.Println("Exiting cmd for container ", container.Name, " is ", containerCommand)
-	return containerCommand, nil
+	fmt.Println("Exiting cmd for container ", container.Name, " is ", combinedCommand)
+	return combinedCommand, nil
 }
 
 func (h *Injector) getVolumePatch() []map[string]interface{} {
@@ -227,7 +232,7 @@ func (h *Injector) getInitContainerPatches(pod *corev1.Pod) []map[string]interfa
 		"value": &corev1.Container{
 			Name:            "zerok-init",
 			Command:         []string{"cp", "-r", "/opt/zerok/.", "/opt/temp"},
-			Image:           "us-west1-docker.pkg.dev/zerok-dev/stage/init-container:latest",
+			Image:           "us-west1-docker.pkg.dev/zerok-dev/stage/init-container:test",
 			ImagePullPolicy: corev1.PullAlways,
 			VolumeMounts: []corev1.VolumeMount{
 				{
