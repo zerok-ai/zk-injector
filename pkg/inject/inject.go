@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
+	utils "github.com/zerok-ai/zerok-injector/pkg/utils"
 	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var agent_options = "-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar -Dotel.traces.exporter=zipkin -Dotel.exporter.zipkin.endpoint=http://zipkin.default.svc.cluster.local:9411/api/v2/spans"
 
 type Injector struct {
 	ImageDownloadTracker *zkclient.ImageDownloadTracker
@@ -128,7 +130,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 		imageHandler := zkclient.GetImageHandler(imageType)
 
-		podCmd, err := h.getPatchCmdForContainer(container, pod, &imageHandler)
+		podCmd, args, err := h.getCmdAndArgsForContainer(container, pod, &imageHandler)
 
 		if err != nil {
 			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
@@ -136,10 +138,12 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 		}
 
+		podCmd, args = transformCommandAndArgsK8s(podCmd, args)
+
 		addCommand := map[string]interface{}{
 			"op":    "add",
 			"path":  "/spec/containers/" + strconv.Itoa(i) + "/command",
-			"value": []string{"/bin/sh"},
+			"value": podCmd,
 		}
 
 		p = append(p, addCommand)
@@ -147,7 +151,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 		addArgs := map[string]interface{}{
 			"op":    "add",
 			"path":  "/spec/containers/" + strconv.Itoa(i) + "/args",
-			"value": []string{"-c", "/opt/zerok/zerok-agent.sh " + podCmd},
+			"value": args,
 		}
 
 		p = append(p, addArgs)
@@ -168,30 +172,23 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 	return p, nil
 }
 
-func (h *Injector) getPatchCmdForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) (string, error) {
+func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]string, []string, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
-		return "", fmt.Errorf("container is nil")
+		return []string{}, []string{}, fmt.Errorf("container is nil")
 	}
 	containerCommand := container.Command
 	args := container.Args
-	for i := 0; i < len(args); i++ {
-		args[i] = strconv.Quote(args[i])
-	}
-	containerCommand = append(containerCommand, args...)
 	var err error
 	if len(containerCommand) == 0 {
 		containerCommand, err = (*imageHandler).GetCommandFromImage(container.Image, pod, h.ImageDownloadTracker)
 	}
-	fmt.Println("Container command is ", containerCommand)
-	combinedCommand := strings.Join(containerCommand[:], " ")
-	combinedCommand = strconv.Quote(combinedCommand)
+	fmt.Println("Container command ", containerCommand, " and args are ", args)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
-		return "", fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
+		return []string{}, []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
 	}
-	fmt.Println("Exiting cmd for container ", container.Name, " is ", combinedCommand)
-	return combinedCommand, nil
+	return containerCommand, args, nil
 }
 
 func (h *Injector) getVolumePatch() []map[string]interface{} {
@@ -246,4 +243,17 @@ func (h *Injector) getInitContainerPatches(pod *corev1.Pod) []map[string]interfa
 	p = append(p, addInitContainer)
 
 	return p
+}
+
+func transformCommandAndArgsK8s(command, args []string) ([]string, []string) {
+	index := utils.FindString(command, "java")
+	if index >= 0 {
+		utils.AppendItem(command, agent_options, index+1)
+	} else {
+		index = utils.FindString(args, "java")
+		if index >= 0 {
+			utils.AppendItem(args, agent_options, index+1)
+		}
+	}
+	return []string{}, []string{}
 }
