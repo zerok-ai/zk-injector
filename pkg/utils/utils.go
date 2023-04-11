@@ -9,9 +9,13 @@ func FindString(array []string, element string) int {
 	return -1
 }
 
-func AppendItem(array []string, element string, i int) []string {
-	array = append(array, "")
-	copy(array[i+1:], array[i:])
-	array[i] = element
+func AppendArray(array []string, elements []string, index int) []string {
+	array = append(array, elements...)
+	copy(array[index+len(elements):], array[index:])
+	k := 0
+	for i := index; k < len(elements); i++ {
+		array[i] = elements[k]
+		k++
+	}
 	return array
 }

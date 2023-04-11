@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var agent_options = "-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar -Dotel.traces.exporter=zipkin -Dotel.exporter.zipkin.endpoint=http://zipkin.default.svc.cluster.local:9411/api/v2/spans"
+var agent_options = []string{"-javaagent:/opt/zerok/opentelemetry-javaagent.jar", "-Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar", "-Dotel.traces.exporter=logging"}
 
 type Injector struct {
 	ImageDownloadTracker *zkclient.ImageDownloadTracker
@@ -140,11 +140,15 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 		podCmd, args = transformCommandAndArgsK8s(podCmd, args)
 
+		fmt.Println("Transformed command ", podCmd, " args ", args)
+
 		addCommand := map[string]interface{}{
 			"op":    "add",
 			"path":  "/spec/containers/" + strconv.Itoa(i) + "/command",
 			"value": podCmd,
 		}
+
+		fmt.Println("Add command ", addCommand)
 
 		p = append(p, addCommand)
 
@@ -155,6 +159,8 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 		}
 
 		p = append(p, addArgs)
+
+		fmt.Println("Add args ", addArgs)
 
 		addVolumeMount := map[string]interface{}{
 			"op":   "add",
@@ -182,6 +188,7 @@ func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *c
 	var err error
 	if len(containerCommand) == 0 {
 		containerCommand, err = (*imageHandler).GetCommandFromImage(container.Image, pod, h.ImageDownloadTracker)
+		args = []string{}
 	}
 	fmt.Println("Container command ", containerCommand, " and args are ", args)
 	if err != nil {
@@ -248,12 +255,12 @@ func (h *Injector) getInitContainerPatches(pod *corev1.Pod) []map[string]interfa
 func transformCommandAndArgsK8s(command, args []string) ([]string, []string) {
 	index := utils.FindString(command, "java")
 	if index >= 0 {
-		utils.AppendItem(command, agent_options, index+1)
+		command = utils.AppendArray(command, agent_options, index+1)
 	} else {
 		index = utils.FindString(args, "java")
 		if index >= 0 {
-			utils.AppendItem(args, agent_options, index+1)
+			args = utils.AppendArray(args, agent_options, index+1)
 		}
 	}
-	return []string{}, []string{}
+	return command, args
 }
