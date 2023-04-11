@@ -7,14 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	utils "github.com/zerok-ai/zerok-injector/pkg/utils"
 	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var agent_options = []string{"-javaagent:/opt/zerok/opentelemetry-javaagent.jar", "-Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar", "-Dotel.traces.exporter=logging"}
 
 type Injector struct {
 	ImageDownloadTracker *zkclient.ImageDownloadTracker
@@ -250,17 +247,4 @@ func (h *Injector) getInitContainerPatches(pod *corev1.Pod) []map[string]interfa
 	p = append(p, addInitContainer)
 
 	return p
-}
-
-func transformCommandAndArgsK8s(command, args []string) ([]string, []string) {
-	index := utils.FindString(command, "java")
-	if index >= 0 {
-		command = utils.AppendArray(command, agent_options, index+1)
-	} else {
-		index = utils.FindString(args, "java")
-		if index >= 0 {
-			args = utils.AppendArray(args, agent_options, index+1)
-		}
-	}
-	return command, args
 }
