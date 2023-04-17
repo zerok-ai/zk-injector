@@ -78,6 +78,8 @@ func createLangDetectionPod(targetPod *corev1.Pod) (*corev1.Pod, error) {
 				{
 					Name:  "lang-detector",
 					Image: fmt.Sprintf("%s:%s", common.LangDetectorImage, common.LangDetectorTag),
+					//TODO: Change this to IfNotPresent post testing.
+					ImagePullPolicy: corev1.PullAlways,
 					Args: []string{
 						fmt.Sprintf("--pod-uid=%s", targetPod.UID),
 						fmt.Sprintf("--container-names=%s", strings.Join(getContainerNames(targetPod), ",")),

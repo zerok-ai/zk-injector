@@ -12,7 +12,7 @@ const (
 	DefaultOdigosConfigurationName      = "odigos-config"
 	OTLPPort                            = 4317
 	OTLPHttpPort                        = 4318
-	LangDetectorImage                   = "rajeevzerok/zerok-langdetector"
+	LangDetectorImage                   = "us-west1-docker.pkg.dev/zerok-dev/stage/zerok-langdetector"
 	LangDetectorTag                     = "test"
 )
 
