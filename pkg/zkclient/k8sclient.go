@@ -64,12 +64,22 @@ func getPodsWithSelector(selector string) *corev1.PodList {
 	return pods
 }
 
-func getPodsWithLabel(labelKey, labelValue string) *corev1.PodList {
+func GetPodsMatchingLabels(labels map[string]string, namespace string) (*corev1.PodList, error) {
+	return nil, nil
+}
+
+func GetPodsWithLabel(labelKey, labelValue string) *corev1.PodList {
 	return getPodsWithSelector(labelKey + "=" + labelValue)
 }
 
-func getPodsWithOutLabel(labelKey string) *corev1.PodList {
+func GetPodsWithoutLabel(labelKey string) *corev1.PodList {
 	return getPodsWithSelector("!" + labelKey)
+}
+
+func CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
+	clientset := GetK8sClient()
+	pod, err := clientset.CoreV1().Pods(pod.Namespace).Create(context.Background(), pod, metav1.CreateOptions{})
+	return pod, err
 }
 
 func GetK8sClient() *kubernetes.Clientset {
