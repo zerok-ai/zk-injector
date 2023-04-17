@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/zerok-ai/zerok-injector/pkg/detector"
 	"github.com/zerok-ai/zerok-injector/pkg/inject"
 	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -65,6 +66,9 @@ func errorResponse(err error, w http.ResponseWriter) {
 }
 
 func main() {
+	fmt.Println("Testing detection logic.")
+	detector.Test()
+
 	dnsNames := []string{
 		webhookServiceName,
 		webhookServiceName + "." + webhookNamespace,

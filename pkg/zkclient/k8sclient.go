@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -64,8 +65,14 @@ func getPodsWithSelector(selector string) *corev1.PodList {
 	return pods
 }
 
-func GetPodsMatchingLabels(labels map[string]string, namespace string) (*corev1.PodList, error) {
-	return nil, nil
+func GetPodsMatchingLabels(labelsMap map[string]string, namespace string) (*corev1.PodList, error) {
+	clientset := GetK8sClient()
+	labelSet := labels.Set(labelsMap)
+	listOptions := metav1.ListOptions{
+		LabelSelector: labelSet.AsSelector().String(),
+	}
+	pods, err := clientset.CoreV1().Pods(namespace).List(context.Background(), listOptions)
+	return pods, err
 }
 
 func GetPodsWithLabel(labelKey, labelValue string) *corev1.PodList {

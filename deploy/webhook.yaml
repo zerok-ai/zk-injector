@@ -52,7 +52,7 @@ spec:
       serviceAccountName: zerok-injector
       containers:
         - name: zerok-injector
-          image: us-west1-docker.pkg.dev/zerok-dev/stage/zerok-injector:0.0.1
+          image: us-west1-docker.pkg.dev/zerok-dev/stage/zerok-injector:test
           imagePullPolicy: Always
           resources:
             limits:
@@ -96,6 +96,9 @@ rules:
   verbs: ["create", "get", "delete", "list", "patch", "update", "watch"]
 - apiGroups: ["v1",""]
   resources: ["secrets"]
+  verbs: ["create", "get", "delete", "list", "patch", "update", "watch"]
+- apiGroups: ["v1",""]
+  resources: ["pods"]
   verbs: ["create", "get", "delete", "list", "patch", "update", "watch"]
 
 ---

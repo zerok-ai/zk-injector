@@ -12,8 +12,8 @@ const (
 	DefaultOdigosConfigurationName      = "odigos-config"
 	OTLPPort                            = 4317
 	OTLPHttpPort                        = 4318
-	LangDetectorImage                   = ""
-	LangDetectorTag                     = "latest"
+	LangDetectorImage                   = "rajeevzerok/zerok-langdetector"
+	LangDetectorTag                     = "test"
 )
 
 var (

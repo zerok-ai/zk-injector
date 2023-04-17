@@ -18,14 +18,22 @@ const (
 	linkerdAnnotationValue = "disabled"
 )
 
+func Test() {
+	m := make(map[string]string)
+	m["app"] = "dwexample"
+	detectLanguage(context.Background(), "default", m)
+}
+
 func detectLanguage(ctx context.Context, namespace string, labels map[string]string) error {
 	targetPod, err := choosePods(ctx, labels, namespace)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	langDetectionPod, err := createLangDetectionPod(targetPod)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -35,6 +43,7 @@ func detectLanguage(ctx context.Context, namespace string, labels map[string]str
 
 func choosePods(ctx context.Context, labels map[string]string, namespace string) (*corev1.Pod, error) {
 	podList, err := zkclient.GetPodsMatchingLabels(labels, namespace)
+	fmt.Println("Pod List ", podList.Items)
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +53,7 @@ func choosePods(ctx context.Context, labels map[string]string, namespace string)
 	}
 
 	for _, pod := range podList.Items {
+		fmt.Println("Pod name is ", pod.Name)
 		if pod.Status.Phase == corev1.PodRunning {
 			return &pod, nil
 		}
