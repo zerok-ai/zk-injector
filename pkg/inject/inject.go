@@ -7,14 +7,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
+	"github.com/zerok-ai/zerok-injector/pkg/storage"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Injector struct {
-	ImageDownloadTracker *zkclient.ImageDownloadTracker
+	ImageRuntimeHandler *storage.ImageRuntimeHandler
 }
 
 func (h *Injector) GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
@@ -123,11 +123,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 		container := &pod.Spec.Containers[i]
 
-		imageType := zkclient.GetImageType(container.Image)
-
-		imageHandler := zkclient.GetImageHandler(imageType)
-
-		podCmd, args, err := h.getCmdAndArgsForContainer(container, pod, &imageHandler)
+		podCmd, args, err := h.getCmdAndArgsForContainer(container, pod, h.ImageRuntimeHandler)
 
 		if err != nil {
 			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
@@ -175,7 +171,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 	return p, nil
 }
 
-func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *zkclient.ImageHandlerInterface) ([]string, []string, error) {
+func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *storage.ImageRuntimeHandler) ([]string, []string, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
 		return []string{}, []string{}, fmt.Errorf("container is nil")
@@ -184,7 +180,8 @@ func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *c
 	args := container.Args
 	var err error
 	if len(containerCommand) == 0 {
-		containerCommand, err = (*imageHandler).GetCommandFromImage(container.Image, pod, h.ImageDownloadTracker)
+		containerRuntime := imageHandler.GetContainerCommand(container, pod)
+		containerCommand = []string{containerRuntime.CmdLine}
 		args = []string{}
 	}
 	fmt.Println("Container command ", containerCommand, " and args are ", args)

@@ -19,26 +19,6 @@ type patchStringValue struct {
 	Value string `json:"value"`
 }
 
-var (
-	dockerConfigKey string = ".dockerconfigjson"
-	authsKey        string = "auths"
-)
-
-func GetImageType(image string) ImageType {
-	return Docker
-}
-
-func GetImagePullSecrets(pod *corev1.Pod) []string {
-	imagePullSecrets := &pod.Spec.ImagePullSecrets
-
-	var secrets []string = []string{}
-
-	for _, imagePullSecret := range *imagePullSecrets {
-		secrets = append(secrets, imagePullSecret.Name)
-	}
-	return secrets
-}
-
 func LabelPod(pod *corev1.Pod, path string, value string) {
 	k8sClient := GetK8sClient().CoreV1()
 	payload := []patchStringValue{{

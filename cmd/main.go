@@ -20,7 +20,7 @@ import (
 
 	"github.com/zerok-ai/zerok-injector/pkg/detector"
 	"github.com/zerok-ai/zerok-injector/pkg/inject"
-	"github.com/zerok-ai/zerok-injector/pkg/zkclient"
+	"github.com/zerok-ai/zerok-injector/pkg/storage"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,10 +93,10 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	tracker := &zkclient.ImageDownloadTracker{DownloadCompMap: sync.Map{}}
+	tracker := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
 
 	injectHandler := &HttpApiHandler{
-		injector: &inject.Injector{ImageDownloadTracker: tracker},
+		injector: &inject.Injector{ImageRuntimeHandler: tracker},
 	}
 
 	mux.Handle("/zk-injector", injectHandler)
