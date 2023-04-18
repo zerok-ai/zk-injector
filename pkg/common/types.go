@@ -1,11 +1,11 @@
 package common
 
 type ProcessDetails struct {
-	ProcessID   int
-	ExeName     string
-	CmdLine     string
-	Runtime     ProgrammingLanguage
-	ProcessName string
+	ProcessID   int                 `json:"pid"`
+	ExeName     string              `json:"exe"`
+	CmdLine     string              `json:"cmd"`
+	Runtime     ProgrammingLanguage `json:"runtime"`
+	ProcessName string              `json:"pname"`
 }
 
 type ProgrammingLanguage string

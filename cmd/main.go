@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zerok-ai/zerok-injector/pkg/detector"
 	"github.com/zerok-ai/zerok-injector/pkg/inject"
 	"github.com/zerok-ai/zerok-injector/pkg/server"
 	"github.com/zerok-ai/zerok-injector/pkg/storage"
@@ -67,9 +66,6 @@ func errorResponse(err error, w http.ResponseWriter) {
 }
 
 func main() {
-	fmt.Println("Testing detection logic.")
-	detector.Test()
-
 	dnsNames := []string{
 		webhookServiceName,
 		webhookServiceName + "." + webhookNamespace,

@@ -11,6 +11,4 @@ RUN make build
 FROM alpine:3.17
 WORKDIR /zerok-injector
 COPY --from=build /go/src/zerok-injector/zerok-injector .
-EXPOSE 8444
-EXPOSE 8443
 CMD ["/zerok-injector/zerok-injector"]

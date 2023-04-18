@@ -18,12 +18,17 @@ type SyncRuntimeApiHandler struct {
 }
 
 func StartServer(runtimeMap *storage.ImageRuntimeHandler) {
+	fmt.Println("Starting server.")
 	mux := http.NewServeMux()
 	syncRuntimeHandler := SyncRuntimeApiHandler{
 		ImageRuntimeHandler: runtimeMap,
 	}
 	mux.Handle(syncRunTimePath, &syncRuntimeHandler)
-	http.ListenAndServe(":8444", nil)
+	s := &http.Server{
+		Addr:    ":8444",
+		Handler: mux,
+	}
+	s.ListenAndServe()
 }
 
 func (h *SyncRuntimeApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
