@@ -17,6 +17,10 @@ spec:
   ports:
     - port: 443
       targetPort: 8443
+      name: webhook
+    - port: 80
+      targetPort: 8444
+      name: sync
   selector:
     app: zerok-injector
 

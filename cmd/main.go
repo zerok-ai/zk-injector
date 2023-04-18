@@ -20,6 +20,7 @@ import (
 
 	"github.com/zerok-ai/zerok-injector/pkg/detector"
 	"github.com/zerok-ai/zerok-injector/pkg/inject"
+	"github.com/zerok-ai/zerok-injector/pkg/server"
 	"github.com/zerok-ai/zerok-injector/pkg/storage"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -93,13 +94,15 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	tracker := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
+	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
+
+	go server.StartServer(runtimeMap)
 
 	injectHandler := &HttpApiHandler{
-		injector: &inject.Injector{ImageRuntimeHandler: tracker},
+		injector: &inject.Injector{ImageRuntimeHandler: runtimeMap},
 	}
 
-	mux.Handle("/zk-injector", injectHandler)
+	mux.Handle(webhookPath, injectHandler)
 
 	s := &http.Server{
 		Addr:           ":8443",
@@ -126,9 +129,9 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()
 
 	fmt.Printf("Creating or updating the mutatingwebhookconfiguration\n")
-	fail := admissionregistrationv1.Fail
+	ignore := admissionregistrationv1.Ignore
 	sideEffect := admissionregistrationv1.SideEffectClassNone
-	mutatingWebhookConfig := createMutatingWebhook(sideEffect, caPEM, webhookService, webhookNamespace, fail)
+	mutatingWebhookConfig := createMutatingWebhook(sideEffect, caPEM, webhookService, webhookNamespace, ignore)
 
 	existingWebhookConfig, err := mutatingWebhookConfigV1Client.MutatingWebhookConfigurations().Get(context.TODO(), webhookName, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
@@ -155,7 +158,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookServ
 	return nil
 }
 
-func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, caPEM *bytes.Buffer, webhookService string, webhookNamespace string, fail admissionregistrationv1.FailurePolicyType) *admissionregistrationv1.MutatingWebhookConfiguration {
+func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, caPEM *bytes.Buffer, webhookService string, webhookNamespace string, ignore admissionregistrationv1.FailurePolicyType) *admissionregistrationv1.MutatingWebhookConfiguration {
 	timeOut := int32(30)
 	mutatingWebhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -192,7 +195,7 @@ func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, c
 					"zk-injection": "enabled",
 				},
 			},
-			FailurePolicy: &fail,
+			FailurePolicy: &ignore,
 		}},
 	}
 	return mutatingWebhookConfig

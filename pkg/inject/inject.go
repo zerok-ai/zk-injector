@@ -180,8 +180,11 @@ func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *c
 	args := container.Args
 	var err error
 	if len(containerCommand) == 0 {
-		containerRuntime := imageHandler.GetContainerCommand(container, pod)
-		containerCommand = []string{containerRuntime.CmdLine}
+		command := imageHandler.GetContainerCommand(container, pod)
+		if command == "" {
+			return []string{}, []string{}, fmt.Errorf("command not found for image: %v", container.Image)
+		}
+		containerCommand = []string{command}
 		args = []string{}
 	}
 	fmt.Println("Container command ", containerCommand, " and args are ", args)
