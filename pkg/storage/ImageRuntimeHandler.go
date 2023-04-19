@@ -30,11 +30,11 @@ func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.Contain
 	}
 }
 
-func (h *ImageRuntimeHandler) GetContainerCommand(container *corev1.Container, pod *corev1.Pod) string {
+func (h *ImageRuntimeHandler) GetContainerCommand(container *corev1.Container, pod *corev1.Pod) (string, common.ProgrammingLanguage) {
 	imageId := container.Image
 	runtime := h.getRuntimeForImage(imageId)
 	if runtime == nil {
-		return ""
+		return "", common.UknownLanguage
 	}
 	processes := runtime.Process
 	if len(processes) > 0 {
@@ -42,8 +42,8 @@ func (h *ImageRuntimeHandler) GetContainerCommand(container *corev1.Container, p
 		fmt.Println("found process ", process)
 		if process.Runtime == common.JavaProgrammingLanguage {
 			fmt.Println("found cmdline ", process.CmdLine)
-			return process.CmdLine
+			return process.CmdLine, common.JavaProgrammingLanguage
 		}
 	}
-	return ""
+	return "", common.UknownLanguage
 }

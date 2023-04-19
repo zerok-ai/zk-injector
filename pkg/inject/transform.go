@@ -1,30 +1,38 @@
 package inject
 
-import utils "github.com/zerok-ai/zerok-injector/pkg/utils"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/zerok-ai/zerok-injector/pkg/common"
+	utils "github.com/zerok-ai/zerok-injector/pkg/utils"
+)
 
 var java_runtime = "java"
 var java_agent_options = []string{"-javaagent:/opt/zerok/opentelemetry-javaagent.jar", "-Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar", "-Dotel.traces.exporter=logging"}
 
-func transformCommandAndArgsK8s(command, args []string) ([]string, []string) {
-	command, args, _ = transformForJavaRuntime(command, args)
-	return command, args
+func transformCommandAndArgsK8s(command string, runtime common.ProgrammingLanguage) ([]string, error) {
+	if runtime == common.JavaProgrammingLanguage {
+		transformedCommand, err := transformForJavaRuntime(command, runtime)
+		if err != nil {
+			fmt.Printf("Error while transforming command %v, err %v", command, err)
+			return []string{}, fmt.Errorf("error while transforming the command")
+		}
+		return transformedCommand, nil
+	}
+	return []string{}, fmt.Errorf("unkown programming language")
 }
 
 // This function transforms the cmd and args if found to be of java runtime.
 // It returns the instrumented cmd and args along with bool which specifies whether
 // if the instrumentation is done.
-func transformForJavaRuntime(command, args []string) ([]string, []string, bool) {
-	instrumented := false
-	index := utils.FindString(command, java_runtime)
+func transformForJavaRuntime(command string, runtime common.ProgrammingLanguage) ([]string, error) {
+	commandArr := strings.Split(command, " ")
+	index := utils.FindString(commandArr, java_runtime)
 	if index >= 0 {
-		command = utils.AppendArray(command, java_agent_options, index+1)
-		instrumented = true
+		commandArr = utils.AppendArray(commandArr, java_agent_options, index+1)
 	} else {
-		index = utils.FindString(args, java_runtime)
-		if index >= 0 {
-			args = utils.AppendArray(args, java_agent_options, index+1)
-		}
-		instrumented = true
+		return []string{}, fmt.Errorf("not found java in command")
 	}
-	return command, args, instrumented
+	return commandArr, nil
 }

@@ -1,8 +1,12 @@
 package utils
 
+import (
+	"strings"
+)
+
 func FindString(array []string, element string) int {
 	for i := 0; i < len(array); i++ {
-		if array[i] == element {
+		if strings.Compare(element, array[i]) == 0 {
 			return i
 		}
 	}
@@ -13,7 +17,7 @@ func AppendArray(array []string, elements []string, index int) []string {
 	array = append(array, elements...)
 	copy(array[index+len(elements):], array[index:])
 	k := 0
-	for i := index; k < len(elements); i++ {
+	for i := index + 1; k < len(elements); i++ {
 		array[i] = elements[k]
 		k++
 	}

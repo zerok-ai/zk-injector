@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/zerok-ai/zerok-injector/pkg/common"
 	"github.com/zerok-ai/zerok-injector/pkg/storage"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -123,7 +124,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 		container := &pod.Spec.Containers[i]
 
-		podCmd, args, err := h.getCmdAndArgsForContainer(container, pod, h.ImageRuntimeHandler)
+		podCmd, runtime, err := h.getCmdAndArgsForContainer(container, pod, h.ImageRuntimeHandler)
 
 		if err != nil {
 			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
@@ -131,29 +132,21 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 		}
 
-		podCmd, args = transformCommandAndArgsK8s(podCmd, args)
+		transformedCommand, err := transformCommandAndArgsK8s(podCmd, runtime)
 
-		fmt.Println("Transformed command ", podCmd, " args ", args)
+		fmt.Println("Transformed command ", transformedCommand)
 
-		addCommand := map[string]interface{}{
-			"op":    "add",
-			"path":  "/spec/containers/" + strconv.Itoa(i) + "/command",
-			"value": podCmd,
+		if err == nil {
+			addCommand := map[string]interface{}{
+				"op":    "add",
+				"path":  "/spec/containers/" + strconv.Itoa(i) + "/command",
+				"value": transformedCommand,
+			}
+
+			fmt.Println("Add command ", addCommand)
+
+			p = append(p, addCommand)
 		}
-
-		fmt.Println("Add command ", addCommand)
-
-		p = append(p, addCommand)
-
-		addArgs := map[string]interface{}{
-			"op":    "add",
-			"path":  "/spec/containers/" + strconv.Itoa(i) + "/args",
-			"value": args,
-		}
-
-		p = append(p, addArgs)
-
-		fmt.Println("Add args ", addArgs)
 
 		addVolumeMount := map[string]interface{}{
 			"op":   "add",
@@ -171,28 +164,25 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 	return p, nil
 }
 
-func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *storage.ImageRuntimeHandler) ([]string, []string, error) {
+func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *storage.ImageRuntimeHandler) (string, common.ProgrammingLanguage, error) {
 	if container == nil {
 		fmt.Println("Container is nil.")
-		return []string{}, []string{}, fmt.Errorf("container is nil")
+		return "", common.UknownLanguage, fmt.Errorf("container is nil")
 	}
-	containerCommand := container.Command
-	args := container.Args
+
 	var err error
-	if len(containerCommand) == 0 {
-		command := imageHandler.GetContainerCommand(container, pod)
-		if command == "" {
-			return []string{}, []string{}, fmt.Errorf("command not found for image: %v", container.Image)
-		}
-		containerCommand = []string{command}
-		args = []string{}
+
+	command, runtime := imageHandler.GetContainerCommand(container, pod)
+	if command == "" {
+		return "", common.UknownLanguage, fmt.Errorf("command not found for image: %v", container.Image)
 	}
-	fmt.Println("Container command ", containerCommand, " and args are ", args)
+
+	fmt.Println("Container command ", command)
 	if err != nil {
 		fmt.Println("Error while getting patch command for image: ", container.Image)
-		return []string{}, []string{}, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
+		return "", common.UknownLanguage, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
 	}
-	return containerCommand, args, nil
+	return command, runtime, nil
 }
 
 func (h *Injector) getVolumePatch() []map[string]interface{} {
