@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/zerok-ai/zerok-injector/pkg/common"
+	common "github.com/zerok-ai/zerok-injector/pkg/common"
 	"github.com/zerok-ai/zerok-injector/pkg/storage"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -146,6 +146,15 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 			fmt.Println("Add command ", addCommand)
 
 			p = append(p, addCommand)
+
+			labelPod := map[string]interface{}{
+				"op":    "replace",
+				"path":  common.ZkOrchPath,
+				"value": common.ZkOrchOrchestrated,
+			}
+
+			p = append(p, labelPod)
+
 		}
 
 		addVolumeMount := map[string]interface{}{
