@@ -128,8 +128,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 		if err != nil {
 			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
-			return p, fmt.Errorf("error caught while getting command %v", err)
-
+			continue
 		}
 
 		transformedCommand, err := transformCommandAndArgsK8s(podCmd, runtime)

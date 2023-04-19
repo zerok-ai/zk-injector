@@ -13,11 +13,13 @@ type ImageRuntimeHandler struct {
 }
 
 func (h *ImageRuntimeHandler) SaveRuntimeForImage(imageID string, runtimeDetails *common.ContainerRuntime) {
-	fmt.Println("Saving image data for ", imageID)
+	fmt.Println("Saving image data for ", imageID, runtimeDetails)
 	h.ImageRuntimeMap.Store(imageID, runtimeDetails)
 }
 
 func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.ContainerRuntime {
+	fmt.Println("getting image data for ", imageID)
+	//TODO: The value returned is not the correct value for the key.
 	value, ok := h.ImageRuntimeMap.Load(imageID)
 	if !ok {
 		return nil
