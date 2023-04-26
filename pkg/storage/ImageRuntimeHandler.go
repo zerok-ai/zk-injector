@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -13,19 +14,43 @@ type ImageRuntimeHandler struct {
 }
 
 func (h *ImageRuntimeHandler) SaveRuntimeForImage(imageID string, runtimeDetails *common.ContainerRuntime) {
-	fmt.Println("Saving image data for ", imageID, runtimeDetails)
-	h.ImageRuntimeMap.Store(imageID, runtimeDetails)
+
+	//oldRuntimeDetails := h.getRuntimeForImage(imageID)
+	//
+	//if oldRuntimeDetails != nil {
+	//	fmt.Println("mk: old data for ", imageID, "=== ", *ToJsonString(oldRuntimeDetails))
+	//}
+
+	// store only iff there is at least one process running in the container
+	if len(runtimeDetails.Process) > 0 {
+		h.ImageRuntimeMap.Store(imageID, runtimeDetails)
+		fmt.Println("Data received for ", imageID, "=== ", *ToJsonString(runtimeDetails))
+	}
+}
+
+func ToJsonString(iInstance interface{}) *string {
+	if iInstance == nil {
+		return nil
+	}
+	bytes, error := json.Marshal(iInstance)
+	if error != nil {
+		//TODO:Refactor
+		return nil
+	} else {
+		iString := string(bytes)
+		return &iString
+
+	}
 }
 
 func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.ContainerRuntime {
-	fmt.Println("getting image data for ", imageID)
-	//TODO: The value returned is not the correct value for the key.
 	value, ok := h.ImageRuntimeMap.Load(imageID)
 	if !ok {
 		return nil
 	}
 	switch y := value.(type) {
 	case *common.ContainerRuntime:
+		fmt.Println("mk: Getting data for image id ", imageID, *ToJsonString(y))
 		return y
 	default:
 		return nil

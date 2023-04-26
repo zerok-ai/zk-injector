@@ -32,7 +32,13 @@ func StartServer(runtimeMap *storage.ImageRuntimeHandler) {
 }
 
 func (h *SyncRuntimeApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Request received.")
+	fmt.Printf("%s call received at %s\n", r.Method, syncRunTimePath)
+
+	if r.Method == http.MethodGet {
+		fmt.Fprintln(w, h.getImageData())
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
@@ -40,7 +46,7 @@ func (h *SyncRuntimeApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = h.syncData(body)
+	err = h.setDataForImages(body)
 
 	if err != nil {
 		fmt.Printf("Error while injecting zk agent %v\n", err)
@@ -53,7 +59,13 @@ func (h *SyncRuntimeApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	r.Body.Close()
 }
 
-func (h *SyncRuntimeApiHandler) syncData(body []byte) error {
+func (h *SyncRuntimeApiHandler) getImageData() interface{} {
+
+	//TODO Send data for images
+	return nil
+}
+
+func (h *SyncRuntimeApiHandler) setDataForImages(body []byte) error {
 	var result common.RuntimeSyncRequest
 	err := json.Unmarshal(body, &result)
 	if err != nil {

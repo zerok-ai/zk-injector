@@ -23,6 +23,7 @@ type ContainerRuntime struct {
 	PodUID        string           `json:"uid"`
 	ContainerName string           `json:"cont"`
 	Image         string           `json:"image"`
+	ImageID       string           `json:"imageId"`
 	Process       []ProcessDetails `json:"process"`
 }
 

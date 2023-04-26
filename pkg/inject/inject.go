@@ -61,6 +61,8 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
 		}
 
+		fmt.Printf("Got a request for POD = %s\n", pod.Name)
+
 		admissionResponse.UID = ar.UID
 
 		dt := time.Now()
@@ -102,16 +104,16 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 }
 
 func (h *Injector) getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
-	p := make([]map[string]interface{}, 0)
-	p = append(p, h.getInitContainerPatches(pod)...)
-	p = append(p, h.getVolumePatch()...)
+	patches := make([]map[string]interface{}, 0)
+	patches = append(patches, h.getInitContainerPatches(pod)...)
+	patches = append(patches, h.getVolumePatch()...)
 	containerPatches, err := h.getContainerPatches(pod)
 	if err != nil {
 		return make([]map[string]interface{}, 0), err
 	}
-	p = append(p, containerPatches...)
-	fmt.Printf("The patches created are %v.\n", p)
-	return p, nil
+	patches = append(patches, containerPatches...)
+	fmt.Printf("The patches created are %v.\n", patches)
+	return patches, nil
 }
 
 func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {

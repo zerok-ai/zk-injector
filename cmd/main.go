@@ -42,6 +42,8 @@ type HttpApiHandler struct {
 func (h *HttpApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 
+	fmt.Printf("Got a request from webhook")
+
 	if err != nil {
 		errorResponse(err, w)
 		return
@@ -66,6 +68,28 @@ func errorResponse(err error, w http.ResponseWriter) {
 }
 
 func main() {
+
+	// initialize certificates
+	caPEM, cert, err := initializeKeysAndCertificates()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
+	// start mutating webhook
+	err = createOrUpdateMutatingWebhookConfiguration(caPEM, webhookServiceName, webhookNamespace)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to create or update the mutating webhook configuration: %v\n", err)
+		fmt.Println(msg)
+		panic(msg)
+	}
+
+	// start server
+	startServer(cert)
+}
+
+func initializeKeysAndCertificates() (*bytes.Buffer, tls.Certificate, error) {
+
 	dnsNames := []string{
 		webhookServiceName,
 		webhookServiceName + "." + webhookNamespace,
@@ -73,22 +97,25 @@ func main() {
 	}
 	commonName := webhookServiceName + "." + webhookNamespace + ".svc"
 
+	// get CA PEM
 	org := "zerok"
 	caPEM, serverCertPEM, serverCertKeyPEM, err := generateCert([]string{org}, dnsNames, commonName)
 	if err != nil {
-		fmt.Printf("Failed to generate certificate: %v.\n", err)
+		msg := fmt.Sprintf("Failed to generate certificate: %v.\n", err)
+		return nil, tls.Certificate{}, fmt.Errorf(msg)
 	}
 
+	// get CA certificate
 	serverPair, err := tls.X509KeyPair(serverCertPEM.Bytes(), serverCertKeyPEM.Bytes())
 	if err != nil {
-		fmt.Printf("Failed to load server certificate key pair: %v.\n", err)
+		msg := fmt.Sprintf("Failed to load server certificate key pair: %v.\n", err)
+		return nil, tls.Certificate{}, fmt.Errorf(msg)
 	}
 
-	err = createOrUpdateMutatingWebhookConfiguration(caPEM, webhookServiceName, webhookNamespace)
-	if err != nil {
-		fmt.Printf("Failed to create or update the mutating webhook configuration: %v\n", err)
-	}
+	return caPEM, serverPair, nil
+}
 
+func startServer(serverPair tls.Certificate) {
 	mux := http.NewServeMux()
 	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
 
