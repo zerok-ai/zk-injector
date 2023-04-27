@@ -9,14 +9,19 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"reflect"
 	"sync"
 	"time"
+	"zerok-injector/internal/config"
+
+	"github.com/ilyakaznacheev/cleanenv"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,6 +74,18 @@ func errorResponse(err error, w http.ResponseWriter) {
 
 func main() {
 
+	var cfg config.ZkInjectorConfig
+	// path := "/opt/zk-auth-configmap.yaml"
+	args := ProcessArgs(&cfg)
+
+	// read configuration from the file and environment variables
+	log.Println("args.ConfigPath==", args.ConfigPath)
+	if err := cleanenv.ReadConfig(args.ConfigPath, &cfg); err != nil {
+		//zklogger.Error(LOG_TAG, err)
+		log.Println(err)
+		//os.Exit(2)
+	}
+
 	// initialize certificates
 	caPEM, cert, err := initializeKeysAndCertificates()
 	if err != nil {
@@ -84,8 +101,13 @@ func main() {
 		panic(msg)
 	}
 
-	// start server
-	startServer(cert)
+	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
+
+	// start data collector
+	go server.StartServer(runtimeMap)
+
+	// start webhook server
+	startWebHookServer(cert, runtimeMap)
 }
 
 func initializeKeysAndCertificates() (*bytes.Buffer, tls.Certificate, error) {
@@ -115,16 +137,13 @@ func initializeKeysAndCertificates() (*bytes.Buffer, tls.Certificate, error) {
 	return caPEM, serverPair, nil
 }
 
-func startServer(serverPair tls.Certificate) {
-	mux := http.NewServeMux()
-	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
-
-	go server.StartServer(runtimeMap)
+func startWebHookServer(serverPair tls.Certificate, runtimeMap *storage.ImageRuntimeHandler) {
 
 	injectHandler := &HttpApiHandler{
 		injector: &inject.Injector{ImageRuntimeHandler: runtimeMap},
 	}
 
+	mux := http.NewServeMux()
 	mux.Handle(webhookPath, injectHandler)
 
 	s := &http.Server{
@@ -319,4 +338,28 @@ func getServerCertPEM(orgs, dnsNames []string, commonName string, parentCa *x509
 	})
 
 	return serverCertPEM, serverPrivateKeyPEM, nil
+}
+
+// Args command-line parameters
+type Args struct {
+	ConfigPath string
+}
+
+// ProcessArgs processes and handles CLI arguments
+func ProcessArgs(cfg interface{}) Args {
+	var a Args
+
+	f := flag.NewFlagSet("Example server", 1)
+	f.StringVar(&a.ConfigPath, "c", "config.yaml", "Path to configuration file")
+
+	fu := f.Usage
+	f.Usage = func() {
+		fu()
+		envHelp, _ := cleanenv.GetDescription(cfg, nil)
+		fmt.Fprintln(f.Output())
+		fmt.Fprintln(f.Output(), envHelp)
+	}
+
+	f.Parse(os.Args[1:])
+	return a
 }

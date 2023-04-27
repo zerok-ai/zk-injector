@@ -5,10 +5,12 @@ ENV CGO_ENABLED 0
 RUN apk add make
 
 WORKDIR /go/src/zerok-injector
+RUN mkdir -p /go/src/zerok-injector/config
+COPY internal/config/config.yaml /go/src/zerok-injector/config/
 ADD . .
 RUN make build
 
 FROM alpine:3.17
 WORKDIR /zerok-injector
 COPY --from=build /go/src/zerok-injector/zerok-injector .
-CMD ["/zerok-injector/zerok-injector"]
+CMD ["/zerok-injector/zerok-injector", "-c", "/go/src/zerok-injector/config/config.yaml"]
