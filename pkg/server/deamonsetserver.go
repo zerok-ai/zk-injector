@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/zerok-ai/zerok-injector/pkg/common"
-	"github.com/zerok-ai/zerok-injector/pkg/storage"
+	"zerok-injector/pkg/common"
+	"zerok-injector/pkg/storage"
 )
 
 var syncRunTimePath = "/sync-runtime"

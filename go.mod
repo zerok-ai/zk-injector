@@ -1,4 +1,4 @@
-module github.com/zerok-ai/zerok-injector
+module zerok-injector
 
 go 1.18
 

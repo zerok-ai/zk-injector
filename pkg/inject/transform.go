@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zerok-ai/zerok-injector/pkg/common"
-	utils "github.com/zerok-ai/zerok-injector/pkg/utils"
+	"zerok-injector/pkg/common"
+	utils "zerok-injector/pkg/utils"
 )
 
 var java_runtime = "java"

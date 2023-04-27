@@ -18,14 +18,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zerok-ai/zerok-injector/pkg/inject"
-	"github.com/zerok-ai/zerok-injector/pkg/server"
-	"github.com/zerok-ai/zerok-injector/pkg/storage"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"zerok-injector/pkg/inject"
+	"zerok-injector/pkg/server"
+	"zerok-injector/pkg/storage"
 )
 
 var (

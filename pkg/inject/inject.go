@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	common "github.com/zerok-ai/zerok-injector/pkg/common"
-	"github.com/zerok-ai/zerok-injector/pkg/storage"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	common "zerok-injector/pkg/common"
+	"zerok-injector/pkg/storage"
 )
 
 type Injector struct {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/zerok-ai/zerok-injector/pkg/common"
 	corev1 "k8s.io/api/core/v1"
+	"zerok-injector/pkg/common"
 )
 
 type ImageRuntimeHandler struct {
