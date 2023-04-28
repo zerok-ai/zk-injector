@@ -52,3 +52,12 @@ func (zkRedis ImageStore) GetString(key string) (*string, error) {
 func (zkRedis ImageStore) Delete(key string) error {
 	return zkRedis.redisClient.HDel(zkRedis.hashTableName, key).Err()
 }
+
+func (zkRedis ImageStore) Length(key string) (int64, error) {
+	// get the number of hash key-value pairs
+	result, err := zkRedis.redisClient.HLen(zkRedis.hashTableName).Result()
+	if err != nil {
+		return 0, err
+	}
+	return result, err
+}

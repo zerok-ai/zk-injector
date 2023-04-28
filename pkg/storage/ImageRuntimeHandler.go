@@ -15,7 +15,10 @@ type ImageRuntimeHandler struct {
 }
 
 func (h *ImageRuntimeHandler) Init() {
-	//	TODO load ImageRuntimeMap through storage.ImageStore
+	//	TODO
+	//	1. load ImageRuntimeMap through storage.ImageStore
+	//  2. run async process to check whether all the expected pods have code injected
+	//	2.1 Auto-restart pods with auto injection enabled
 }
 
 func (h *ImageRuntimeHandler) SaveRuntimeForImage(imageID string, runtimeDetails *common.ContainerRuntime) {
@@ -37,15 +40,12 @@ func ToJsonString(iInstance interface{}) *string {
 	if iInstance == nil {
 		return nil
 	}
-	bytes, error := json.Marshal(iInstance)
-	if error != nil {
-		//TODO:Refactor
+	bytes, err := json.Marshal(iInstance)
+	if err != nil {
 		return nil
-	} else {
-		iString := string(bytes)
-		return &iString
-
 	}
+	iString := string(bytes)
+	return &iString
 }
 
 func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.ContainerRuntime {
