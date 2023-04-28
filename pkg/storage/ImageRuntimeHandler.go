@@ -11,20 +11,25 @@ import (
 
 type ImageRuntimeHandler struct {
 	ImageRuntimeMap sync.Map
+	ImageStore      ImageStore
+}
+
+func (h *ImageRuntimeHandler) Init() {
+	//	TODO load ImageRuntimeMap through storage.ImageStore
 }
 
 func (h *ImageRuntimeHandler) SaveRuntimeForImage(imageID string, runtimeDetails *common.ContainerRuntime) {
 
-	//oldRuntimeDetails := h.getRuntimeForImage(imageID)
-	//
-	//if oldRuntimeDetails != nil {
-	//	fmt.Println("mk: old data for ", imageID, "=== ", *ToJsonString(oldRuntimeDetails))
-	//}
-
 	// store only iff there is at least one process running in the container
 	if len(runtimeDetails.Process) > 0 {
+
+		//TODO check if the old value is different from new value then
+		// 1. update ImageRuntimeMap
+		// 2. storage.ImageStore
+
 		h.ImageRuntimeMap.Store(imageID, runtimeDetails)
 		fmt.Println("Data received for ", imageID, "=== ", *ToJsonString(runtimeDetails))
+
 	}
 }
 

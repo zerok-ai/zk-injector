@@ -102,6 +102,7 @@ func main() {
 	}
 
 	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
+	runtimeMap.Init()
 
 	// start data collector
 	go server.StartServer(runtimeMap)
