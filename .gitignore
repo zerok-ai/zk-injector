@@ -3,3 +3,4 @@ ssl/*.pem
 ssl/*.csr
 /mutateme
 .vscode
+vendor

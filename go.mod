@@ -3,6 +3,7 @@ module zerok-injector
 go 1.18
 
 require (
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/ilyakaznacheev/cleanenv v1.4.2
 	k8s.io/api v0.26.0
 	k8s.io/apimachinery v0.26.0
@@ -29,6 +30,8 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
+	github.com/stretchr/testify v1.8.1 // indirect
 	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sys v0.3.0 // indirect
