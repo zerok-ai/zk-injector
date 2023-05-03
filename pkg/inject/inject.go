@@ -7,17 +7,20 @@ import (
 	"strconv"
 	"time"
 
+	common "zerok-injector/pkg/common"
+	"zerok-injector/pkg/storage"
+
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	common "zerok-injector/pkg/common"
-	"zerok-injector/pkg/storage"
 )
 
+// Injector is a struct that implements an admission controller webhook for Kubernetes pods.
 type Injector struct {
 	ImageRuntimeHandler *storage.ImageRuntimeHandler
 }
 
+// GetEmptyResponse returns an empty admission response as a JSON byte array.
 func (h *Injector) GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte, error) {
 	ar := admissionReview.Request
 	if ar != nil {
@@ -41,6 +44,7 @@ func (h *Injector) GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte,
 	return nil, fmt.Errorf("empty admission request")
 }
 
+// Inject takes a JSON byte array as input, which represents an admission review object, and returns an updated admission review object with patches applied to the pod.
 func (h *Injector) Inject(body []byte) ([]byte, error) {
 	admissionReview := v1.AdmissionReview{}
 	if err := json.Unmarshal(body, &admissionReview); err != nil {
