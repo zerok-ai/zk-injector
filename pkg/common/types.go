@@ -19,6 +19,7 @@ const (
 	UknownLanguage                ProgrammingLanguage = "unknown"
 )
 
+// Ques: Are PodUID and ContainerName needed?
 type ContainerRuntime struct {
 	PodUID        string           `json:"uid"`
 	ContainerName string           `json:"cont"`

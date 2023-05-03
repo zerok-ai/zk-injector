@@ -77,6 +77,7 @@ func errorResponse(err error, w http.ResponseWriter) {
 // Add config files for local and write runLocal scripts.
 // Add a smilar script for stage and prod as well.
 // Do I need to setup Iris in this?
+// What if the processes change in a pod based on args to a container?
 
 func main() {
 

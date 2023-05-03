@@ -32,12 +32,11 @@ func (h *ImageRuntimeHandler) SaveRuntimeForImage(imageID string, runtimeDetails
 
 	// store only iff there is at least one process running in the container
 	if len(runtimeDetails.Process) > 0 {
-
-		//TODO check if the old value is different from new value then
-		// 1. update ImageRuntimeMap
-		// 2. storage.ImageStore
-
-		h.ImageRuntimeMap.Store(imageID, runtimeDetails)
+		currentRuntimeDetails := h.getRuntimeForImage(imageID)
+		if !h.compareRuntimeDetails(currentRuntimeDetails, runtimeDetails) {
+			h.ImageRuntimeMap.Store(imageID, runtimeDetails)
+			h.ImageStore.SetString(imageID, *utils.ToJsonString(runtimeDetails))
+		}
 		fmt.Println("Data received for ", imageID, "=== ", utils.ToJsonString(runtimeDetails))
 
 	}
@@ -74,4 +73,15 @@ func (h *ImageRuntimeHandler) GetContainerCommand(container *corev1.Container, p
 		}
 	}
 	return "", common.UknownLanguage
+}
+
+func (h *ImageRuntimeHandler) compareRuntimeDetails(first *common.ContainerRuntime, second *common.ContainerRuntime) bool {
+	//Not comparing Pod UID and container Name, because these can change across pods with container with same image.
+
+	if first.Image != second.Image || first.ImageID != second.ImageID {
+		return false
+	}
+
+	//Comparing processes
+	return true
 }
