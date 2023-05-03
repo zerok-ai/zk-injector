@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"time"
 
+	common "zerok-injector/pkg/common"
+	"zerok-injector/pkg/storage"
+
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	common "zerok-injector/pkg/common"
-	"zerok-injector/pkg/storage"
 )
 
 type Injector struct {
@@ -118,7 +119,7 @@ func (h *Injector) getPatches(pod *corev1.Pod) ([]map[string]interface{}, error)
 
 func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 
-	p := make([]map[string]interface{}, 0)
+	patches := make([]map[string]interface{}, 0)
 
 	containers := pod.Spec.Containers
 
@@ -146,7 +147,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 
 			fmt.Println("Add command ", addCommand)
 
-			p = append(p, addCommand)
+			patches = append(patches, addCommand)
 
 			labelPod := map[string]interface{}{
 				"op":    "replace",
@@ -154,24 +155,29 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{
 				"value": common.ZkOrchOrchestrated,
 			}
 
-			p = append(p, labelPod)
+			patches = append(patches, labelPod)
 
 		}
 
-		addVolumeMount := map[string]interface{}{
-			"op":   "add",
-			"path": "/spec/containers/" + strconv.Itoa(i) + "/volumeMounts/-",
-			"value": corev1.VolumeMount{
-				MountPath: "/opt/zerok",
-				Name:      "zerok-init",
-			},
-		}
+		addVolumeMount := h.getVolumeMount(i)
 
-		p = append(p, addVolumeMount)
+		patches = append(patches, addVolumeMount)
 
 	}
 
-	return p, nil
+	return patches, nil
+}
+
+func (*Injector) getVolumeMount(i int) map[string]interface{} {
+	addVolumeMount := map[string]interface{}{
+		"op":   "add",
+		"path": "/spec/containers/" + strconv.Itoa(i) + "/volumeMounts/-",
+		"value": corev1.VolumeMount{
+			MountPath: "/opt/zerok",
+			Name:      "zerok-init",
+		},
+	}
+	return addVolumeMount
 }
 
 func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *storage.ImageRuntimeHandler) (string, common.ProgrammingLanguage, error) {
