@@ -23,7 +23,7 @@ ls
 echo "--------------------"
 
 final_cmd=""
-agent_options="-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar -Dotel.traces.exporter=jaeger -Dotel.exporter.jaeger.endpoint=simplest-collector.observability.svc.cluster.local:14250"
+agent_options="-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.service.name=app -Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar -Dotel.traces.exporter=jaeger -Dotel.exporter.jaeger.endpoint=http://simplest-collector.observability.svc.cluster.local:14250"
 
 for var in "$@"
 do
