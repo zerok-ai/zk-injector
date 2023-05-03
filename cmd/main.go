@@ -19,18 +19,19 @@ import (
 	"reflect"
 	"sync"
 	"time"
-	"zerok-injector/internal/config"
 
 	"github.com/ilyakaznacheev/cleanenv"
+
+	"zerok-injector/internal/config"
+	"zerok-injector/pkg/inject"
+	"zerok-injector/pkg/server"
+	"zerok-injector/pkg/storage"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"zerok-injector/pkg/inject"
-	"zerok-injector/pkg/server"
-	"zerok-injector/pkg/storage"
 )
 
 var (
@@ -72,6 +73,11 @@ func errorResponse(err error, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusInternalServerError)
 }
 
+//TODO:
+// Add config files for local and write runLocal scripts.
+// Add a smilar script for stage and prod as well.
+// Do I need to setup Iris in this?
+
 func main() {
 
 	var cfg config.ZkInjectorConfig
@@ -101,8 +107,8 @@ func main() {
 		panic(msg)
 	}
 
-	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: sync.Map{}}
-	runtimeMap.Init()
+	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: &sync.Map{}}
+	runtimeMap.Init(cfg.Redis)
 
 	// start data collector
 	go server.StartServer(runtimeMap)
