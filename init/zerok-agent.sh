@@ -12,7 +12,7 @@ ls /opt/zerok/
 echo "ls:"
 ls
 
-agent_options="-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar -Dotel.traces.exporter=zipkin -Dotel.exporter.zipkin.endpoint=http://zipkin.default.svc.cluster.local:9411/api/v2/spans"
+agent_options="-javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.traces.exporter=jaeger -Dotel.exporter.jaeger.endpoint=simplest-collector.observability.svc.cluster.local:14250"
 javaString="java $agent_options"
 
 firstCommand=$1

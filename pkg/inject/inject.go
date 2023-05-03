@@ -107,6 +107,7 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 	return responseBody, nil
 }
 
+// This method returns all the patches to be applied on the pod.
 func (h *Injector) getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
 	patches := make([]map[string]interface{}, 0)
 	patches = append(patches, h.getInitContainerPatches(pod)...)
