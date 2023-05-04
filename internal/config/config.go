@@ -6,6 +6,15 @@ type RedisConfig struct {
 	ReadTimeout int    `yaml:"readTimeout"`
 }
 
+type WebhookConfig struct {
+	Namespace string `yaml:"namespace"`
+	Service   string `yaml:"service"`
+	Name      string `yaml:"name"`
+	Path      string `yaml:"path"`
+}
+
 type ZkInjectorConfig struct {
-	Redis RedisConfig `yaml:"redis"`
+	Redis   RedisConfig   `yaml:"redis"`
+	Webhook WebhookConfig `yaml:"webhook"`
+	Debug   bool          `yaml:"debug"`
 }

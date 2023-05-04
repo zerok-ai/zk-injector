@@ -1,5 +1,5 @@
 redis:
-  host: redis.redis.svc.cluster.local
+  host: localhost
   port: 6379
   readTimeout: 20
 webhook:
@@ -7,4 +7,4 @@ webhook:
   service: zerok-injector
   name: zerok-webhook
   path: /zk-injector
-debug: false
+debug: true
