@@ -18,7 +18,6 @@ type SyncRuntimeApiHandler struct {
 }
 
 func StartServer(runtimeMap *storage.ImageRuntimeHandler) {
-	fmt.Println("Starting server.")
 	mux := http.NewServeMux()
 	syncRuntimeHandler := SyncRuntimeApiHandler{
 		ImageRuntimeHandler: runtimeMap,

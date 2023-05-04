@@ -45,18 +45,23 @@ func webhookErrorResponse(err error, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusInternalServerError)
 }
 
-func StartWebHookServer(cfg config.WebhookConfig, serverPair tls.Certificate, runtimeMap *storage.ImageRuntimeHandler) {
+func getMux(cfg config.WebhookConfig, runtimeMap *storage.ImageRuntimeHandler) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.Handle(cfg.Path, getHandler(runtimeMap))
+	return mux
+}
 
+func getHandler(runtimeMap *storage.ImageRuntimeHandler) http.Handler {
 	injectHandler := &HttpApiHandler{
 		injector: &inject.Injector{ImageRuntimeHandler: runtimeMap},
 	}
+	return injectHandler
+}
 
-	mux := http.NewServeMux()
-	mux.Handle(cfg.Path, injectHandler)
-
+func StartWebHookServer(cfg config.WebhookConfig, serverPair tls.Certificate, runtimeMap *storage.ImageRuntimeHandler) {
 	s := &http.Server{
 		Addr:           ":8443",
-		Handler:        mux,
+		Handler:        getMux(cfg, runtimeMap),
 		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{serverPair}},
 		ReadTimeout:    30 * time.Second,
 		WriteTimeout:   30 * time.Second,
@@ -64,4 +69,16 @@ func StartWebHookServer(cfg config.WebhookConfig, serverPair tls.Certificate, ru
 	}
 
 	s.ListenAndServeTLS("", "")
+}
+
+func StartDebugWebHookServer(cfg config.WebhookConfig, runtimeMap *storage.ImageRuntimeHandler) {
+	s := &http.Server{
+		Addr:           ":8442",
+		Handler:        getMux(cfg, runtimeMap),
+		ReadTimeout:    30 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	s.ListenAndServe()
 }

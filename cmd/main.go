@@ -43,24 +43,27 @@ func main() {
 	// start data collector
 	go server.StartServer(runtimeMap)
 
-	// initialize certificates
-	caPEM, cert, err := cert.InitializeKeysAndCertificates(cfg.Webhook)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
+	if cfg.Debug {
+		server.StartDebugWebHookServer(cfg.Webhook, runtimeMap)
+	} else {
+		// initialize certificates
+		caPEM, cert, err := cert.InitializeKeysAndCertificates(cfg.Webhook)
+		if err != nil {
+			fmt.Println(err)
+			panic(err)
+		}
+
+		// start mutating webhook
+		err = utils.CreateOrUpdateMutatingWebhookConfiguration(caPEM, cfg.Webhook)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to create or update the mutating webhook configuration: %v\n", err)
+			fmt.Println(msg)
+			panic(msg)
+		}
+
+		// start webhook server
+		server.StartWebHookServer(cfg.Webhook, cert, runtimeMap)
 	}
-
-	// start mutating webhook
-	err = utils.CreateOrUpdateMutatingWebhookConfiguration(caPEM, cfg.Webhook)
-	if err != nil {
-		msg := fmt.Sprintf("Failed to create or update the mutating webhook configuration: %v\n", err)
-		fmt.Println(msg)
-		panic(msg)
-	}
-
-	// start webhook server
-	server.StartWebHookServer(cfg.Webhook, cert, runtimeMap)
-
 }
 
 // Args command-line parameters
