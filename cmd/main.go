@@ -19,9 +19,7 @@ import (
 //TODO:
 // Create local setup and test redis integration.
 // Integrate iris into the repo.
-// Add config files for local and write runLocal scripts.
-// Add a smilar script for stage and prod as well.
-// Do I need to setup Iris in this?
+// Add a script for stage and prod as well.
 // What if the processes change in a pod based on args to a container?
 // Add service name from workload to otel agent.
 
