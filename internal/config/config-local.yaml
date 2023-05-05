@@ -2,6 +2,7 @@ redis:
   host: localhost
   port: 6379
   readTimeout: 20
+  pollingInterval: 30 #seconds
 
 webhook:
   namespace: zerok-injector
