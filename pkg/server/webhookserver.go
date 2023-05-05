@@ -1,29 +1,28 @@
 package server
 
 import (
-	"crypto/tls"
-
+	"bytes"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
-	"time"
 	"zerok-injector/internal/config"
 	"zerok-injector/pkg/inject"
 	"zerok-injector/pkg/storage"
+
+	"github.com/kataras/iris/v12"
 )
 
 type HttpApiHandler struct {
 	injector *inject.Injector
 }
 
-func (h *HttpApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+func (h *HttpApiHandler) ServeHTTP(ctx iris.Context) {
+	body, err := io.ReadAll(ctx.Request().Body)
 
 	fmt.Printf("Got a request from webhook")
 
 	if err != nil {
-		webhookErrorResponse(err, w)
+		webhookErrorResponse(err, ctx)
 		return
 	}
 
@@ -34,51 +33,28 @@ func (h *HttpApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Sending http status as OK, even when injection failed to not disturb the pods in cluster.
-	w.WriteHeader(http.StatusOK)
-	w.Write(response)
-
-	r.Body.Close()
+	ctx.StatusCode(iris.StatusOK)
+	ctx.Write(response)
 }
 
-func webhookErrorResponse(err error, w http.ResponseWriter) {
+func webhookErrorResponse(err error, ctx iris.Context) {
 	log.Println(err)
-	w.WriteHeader(http.StatusInternalServerError)
+	ctx.StatusCode(iris.StatusInternalServerError)
 }
 
-func getMux(cfg config.WebhookConfig, runtimeMap *storage.ImageRuntimeHandler) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.Handle(cfg.Path, getHandler(runtimeMap))
-	return mux
-}
-
-func getHandler(runtimeMap *storage.ImageRuntimeHandler) http.Handler {
+func handleRoutes(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap *storage.ImageRuntimeHandler) {
 	injectHandler := &HttpApiHandler{
 		injector: &inject.Injector{ImageRuntimeHandler: runtimeMap},
 	}
-	return injectHandler
+	app.Post(cfg.Webhook.Path, injectHandler.ServeHTTP)
 }
 
-func StartWebHookServer(cfg config.WebhookConfig, serverPair tls.Certificate, runtimeMap *storage.ImageRuntimeHandler) {
-	s := &http.Server{
-		Addr:           ":8443",
-		Handler:        getMux(cfg, runtimeMap),
-		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{serverPair}},
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	s.ListenAndServeTLS("", "")
+func StartWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, cert *bytes.Buffer, key *bytes.Buffer, runtimeMap *storage.ImageRuntimeHandler) {
+	handleRoutes(app, cfg, runtimeMap)
+	app.Run(iris.TLS(":"+cfg.Webhook.Port, cert.String(), key.String()))
 }
 
-func StartDebugWebHookServer(cfg config.WebhookConfig, runtimeMap *storage.ImageRuntimeHandler) {
-	s := &http.Server{
-		Addr:           ":8442",
-		Handler:        getMux(cfg, runtimeMap),
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	s.ListenAndServe()
+func StartDebugWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap *storage.ImageRuntimeHandler) {
+	handleRoutes(app, cfg, runtimeMap)
+	app.Run(iris.Addr(":" + cfg.Webhook.Port))
 }

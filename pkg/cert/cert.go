@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -14,7 +13,7 @@ import (
 	"zerok-injector/internal/config"
 )
 
-func InitializeKeysAndCertificates(cfg config.WebhookConfig) (*bytes.Buffer, tls.Certificate, error) {
+func InitializeKeysAndCertificates(cfg config.WebhookConfig) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
 
 	dnsNames := []string{
 		cfg.Service,
@@ -28,17 +27,10 @@ func InitializeKeysAndCertificates(cfg config.WebhookConfig) (*bytes.Buffer, tls
 	caPEM, serverCertPEM, serverCertKeyPEM, err := generateCert([]string{org}, dnsNames, commonName)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to generate certificate: %v.\n", err)
-		return nil, tls.Certificate{}, fmt.Errorf(msg)
+		return nil, nil, nil, fmt.Errorf(msg)
 	}
 
-	// get CA certificate
-	serverPair, err := tls.X509KeyPair(serverCertPEM.Bytes(), serverCertKeyPEM.Bytes())
-	if err != nil {
-		msg := fmt.Sprintf("Failed to load server certificate key pair: %v.\n", err)
-		return nil, tls.Certificate{}, fmt.Errorf(msg)
-	}
-
-	return caPEM, serverPair, nil
+	return caPEM, serverCertPEM, serverCertKeyPEM, nil
 }
 
 func generateCert(orgs, dnsNames []string, commonName string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {

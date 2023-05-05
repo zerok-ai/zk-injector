@@ -46,8 +46,8 @@ func (h *Injector) GetEmptyResponse(admissionReview v1.AdmissionReview) ([]byte,
 
 // Inject takes a JSON byte array as input, which represents an admission review object, and returns an updated admission review object with patches applied to the pod.
 func (h *Injector) Inject(body []byte) ([]byte, error) {
-	admissionReview := v1.AdmissionReview{}
-	if err := json.Unmarshal(body, &admissionReview); err != nil {
+	admissionReviewObj := v1.AdmissionReview{}
+	if err := json.Unmarshal(body, &admissionReviewObj); err != nil {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
 	}
 
@@ -55,22 +55,22 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 	var pod *corev1.Pod
 
 	responseBody := []byte{}
-	ar := admissionReview.Request
+	admissionRequest := admissionReviewObj.Request
 	admissionResponse := v1.AdmissionResponse{}
-	emptyResponse, _ := h.GetEmptyResponse(admissionReview)
+	emptyResponse, _ := h.GetEmptyResponse(admissionReviewObj)
 
-	if ar != nil {
+	if admissionRequest != nil {
 
-		if err := json.Unmarshal(ar.Object.Raw, &pod); err != nil {
+		if err := json.Unmarshal(admissionRequest.Object.Raw, &pod); err != nil {
 			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
 		}
 
 		fmt.Printf("Got a request for POD = %s\n", pod.Name)
 
-		admissionResponse.UID = ar.UID
+		admissionResponse.UID = admissionRequest.UID
 
 		dt := time.Now()
-		fmt.Println("Got request with uid ", ar.UID, " at time ", dt.String())
+		fmt.Println("Got request with uid ", admissionRequest.UID, " at time ", dt.String())
 		admissionResponse.Allowed = true
 
 		patchType := v1.PatchTypeJSONPatch
@@ -94,9 +94,9 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 			Status: "Success",
 		}
 
-		admissionReview.Response = &admissionResponse
+		admissionReviewObj.Response = &admissionResponse
 
-		responseBody, err = json.Marshal(admissionReview)
+		responseBody, err = json.Marshal(admissionReviewObj)
 		if err != nil {
 			return emptyResponse, err
 		}

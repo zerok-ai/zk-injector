@@ -11,6 +11,7 @@ type WebhookConfig struct {
 	Service   string `yaml:"service"`
 	Name      string `yaml:"name"`
 	Path      string `yaml:"path"`
+	Port      string `yaml:"port"`
 }
 
 type ZkInjectorConfig struct {
