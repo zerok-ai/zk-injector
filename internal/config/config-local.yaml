@@ -8,9 +8,7 @@ webhook:
   service: zerok-injector
   name: zerok-webhook
   path: /zk-injector
-
-server:
-  port: 80
+  port: 8443
 
 logs:
   color: true

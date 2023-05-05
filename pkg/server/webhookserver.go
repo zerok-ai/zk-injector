@@ -49,12 +49,12 @@ func handleRoutes(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap
 	app.Post(cfg.Webhook.Path, injectHandler.ServeHTTP)
 }
 
-func StartWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, cert *bytes.Buffer, key *bytes.Buffer, runtimeMap *storage.ImageRuntimeHandler) {
+func StartWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, cert *bytes.Buffer, key *bytes.Buffer, runtimeMap *storage.ImageRuntimeHandler, config iris.Configurator) {
 	handleRoutes(app, cfg, runtimeMap)
-	app.Run(iris.TLS(":"+cfg.Webhook.Port, cert.String(), key.String()))
+	app.Run(iris.TLS(":"+cfg.Webhook.Port, cert.String(), key.String()), config)
 }
 
-func StartDebugWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap *storage.ImageRuntimeHandler) {
+func StartDebugWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap *storage.ImageRuntimeHandler, config iris.Configurator) {
 	handleRoutes(app, cfg, runtimeMap)
-	app.Run(iris.Addr(":" + cfg.Webhook.Port))
+	app.Run(iris.Addr(":"+cfg.Webhook.Port), config)
 }

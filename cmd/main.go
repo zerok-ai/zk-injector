@@ -53,7 +53,7 @@ func main() {
 	})
 
 	if cfg.Debug {
-		server.StartDebugWebHookServer(app, cfg, runtimeMap)
+		server.StartDebugWebHookServer(app, cfg, runtimeMap, config)
 	} else {
 		// initialize certificates
 		caPEM, cert, key, err := cert.InitializeKeysAndCertificates(cfg.Webhook)
@@ -71,10 +71,8 @@ func main() {
 		}
 
 		// start webhook server
-		server.StartWebHookServer(app, cfg, cert, key, runtimeMap)
+		server.StartWebHookServer(app, cfg, cert, key, runtimeMap, config)
 	}
-
-	app.Listen(":8081", config)
 }
 
 func newApp() *iris.Application {
