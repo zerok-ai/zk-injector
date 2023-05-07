@@ -1,13 +1,5 @@
 package common
 
-type ProcessDetails struct {
-	ProcessID   int                 `json:"pid"`
-	ExeName     string              `json:"exe"`
-	CmdLine     string              `json:"cmd"`
-	Runtime     ProgrammingLanguage `json:"runtime"`
-	ProcessName string              `json:"pname"`
-}
-
 type ProgrammingLanguage string
 
 const (
@@ -19,13 +11,10 @@ const (
 	UknownLanguage                ProgrammingLanguage = "unknown"
 )
 
-// Ques: Are PodUID and ContainerName needed?
 type ContainerRuntime struct {
-	PodUID        string           `json:"uid"`
-	ContainerName string           `json:"cont"`
-	Image         string           `json:"image"`
-	ImageID       string           `json:"imageId"`
-	Process       []ProcessDetails `json:"process"`
+	Image     string   `json:"image"`
+	ImageID   string   `json:"imageId"`
+	Languages []string `json:"language"`
 }
 
 type RuntimeSyncRequest struct {

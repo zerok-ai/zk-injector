@@ -190,19 +190,22 @@ func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *c
 		return "", common.UknownLanguage, fmt.Errorf("container is nil")
 	}
 
-	var err error
+	//var err error
 
-	command, runtime := imageHandler.GetContainerCommand(container, pod)
-	if command == "" {
-		return "", common.UknownLanguage, fmt.Errorf("command not found for image: %v", container.Image)
-	}
+	// command, runtime := imageHandler.GetContainerCommand(container, pod)
+	// if command == "" {
+	// 	return "", common.UknownLanguage, fmt.Errorf("command not found for image: %v", container.Image)
+	// }
 
-	fmt.Println("Container command ", command)
-	if err != nil {
-		fmt.Println("Error while getting patch command for image: ", container.Image)
-		return "", common.UknownLanguage, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
-	}
-	return command, runtime, nil
+	// fmt.Println("Container command ", command)
+	// if err != nil {
+	// 	fmt.Println("Error while getting patch command for image: ", container.Image)
+	// 	return "", common.UknownLanguage, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
+	// }
+	// return command, runtime, nil
+
+	//TODO: Adding this return temporarily for the program to compile. Change the injection code to add annotation.
+	return "", "", nil
 }
 
 func (h *Injector) getVolumePatch() []map[string]interface{} {
