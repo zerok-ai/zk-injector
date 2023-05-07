@@ -11,13 +11,23 @@ import (
 )
 
 const (
-	defaultExpiry time.Duration = time.Hour * 24 * 30
-	hashTableName string        = "container_images"
+	defaultExpiry     time.Duration = time.Hour * 24 * 30
+	hashSetName       string        = "zk_img_proc_map"
+	hashSetVersionKey string        = "zk_img_proc_version"
 )
 
 type ImageStore struct {
-	redisClient   *redis.Client
-	hashTableName string
+	redisClient *redis.Client
+	hashSetName string
+}
+
+func (zkRedis *ImageStore) GetHashSetVersion() (*string, error) {
+	data, err := zkRedis.GetString(hashSetVersionKey)
+	if err != nil {
+		fmt.Println("Error caught while getting hash set version from redis.")
+		return nil, err
+	}
+	return data, nil
 }
 
 func GetNewImageStore(redisConfig config.RedisConfig) *ImageStore {
@@ -32,8 +42,8 @@ func GetNewImageStore(redisConfig config.RedisConfig) *ImageStore {
 	//_redisClient.Expire(hashTableName, defaultExpiry)
 
 	imgRedis := &ImageStore{
-		redisClient:   _redisClient,
-		hashTableName: hashTableName,
+		redisClient: _redisClient,
+		hashSetName: hashSetName,
 	}
 	return imgRedis
 }
@@ -45,7 +55,7 @@ func (zkRedis *ImageStore) LoadAllData(imageRuntimeMap *sync.Map) error {
 	for {
 		var err error
 		//Getting 10 fields at once.
-		data, cursor, err = zkRedis.redisClient.HScan(hashTableName, cursor, "*", 10).Result()
+		data, cursor, err = zkRedis.redisClient.HScan(hashSetName, cursor, "*", 10).Result()
 		if err != nil {
 			return err
 		}
@@ -68,31 +78,12 @@ func (zkRedis *ImageStore) LoadAllData(imageRuntimeMap *sync.Map) error {
 	return nil
 }
 
-// TODO: Add error handling here. Incase saving to redis fails.
-func (zkRedis *ImageStore) SetString(key string, value string) error {
-	return zkRedis.redisClient.HSet(zkRedis.hashTableName, key, value).Err()
-}
-
-// TODO: Add error handling here. Incase loading from redis fails.
 func (zkRedis *ImageStore) GetString(key string) (*string, error) {
-	output := zkRedis.redisClient.HGet(zkRedis.hashTableName, key)
+	output := zkRedis.redisClient.HGet(zkRedis.hashSetName, key)
 	err := output.Err()
 	if err != nil {
 		return nil, err
 	}
 	value := output.Val()
 	return &value, nil
-}
-
-func (zkRedis *ImageStore) Delete(key string) error {
-	return zkRedis.redisClient.HDel(zkRedis.hashTableName, key).Err()
-}
-
-func (zkRedis *ImageStore) Length(key string) (int64, error) {
-	// get the number of hash key-value pairs
-	result, err := zkRedis.redisClient.HLen(zkRedis.hashTableName).Result()
-	if err != nil {
-		return 0, err
-	}
-	return result, err
 }
