@@ -25,7 +25,8 @@ import (
 // Check todos in image map handler file.
 // Add a script for stage and prod as well.
 // What if the processes change in a pod based on args to a container?
-// Add service name from workload to otel agent
+// Add service name from workload to otel agent.
+// Integrate a logger in the project.
 
 func main() {
 
