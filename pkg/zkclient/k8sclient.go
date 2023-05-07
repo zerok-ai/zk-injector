@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,18 @@ type patchStringValue struct {
 	Op    string `json:"op"`
 	Path  string `json:"path"`
 	Value string `json:"value"`
+}
+
+func RestartDeployment(namespace string, deployment string) error {
+	k8sClient := GetK8sClient()
+	deploymentsClient := k8sClient.AppsV1().Deployments(namespace)
+	data := fmt.Sprintf(`{"spec": {"template": {"metadata": {"annotations": {"zk-operator/restartedAt": "%s"}}}}}`, time.Now().Format("20060102150405"))
+	_, err := deploymentsClient.Patch(context.TODO(), deployment, types.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
+	if err != nil {
+		fmt.Printf("Error caught while restarting deployment %v.\n", err)
+		return err
+	}
+	return nil
 }
 
 func LabelPod(pod *corev1.Pod, path string, value string) {
