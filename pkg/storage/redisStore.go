@@ -35,7 +35,7 @@ func GetNewImageStore(redisConfig config.RedisConfig) *ImageStore {
 	_redisClient := redis.NewClient(&redis.Options{
 		Addr:        fmt.Sprint(redisConfig.Host, ":", redisConfig.Port),
 		Password:    "",
-		DB:          0,
+		DB:          redisConfig.DB,
 		ReadTimeout: readTimeout,
 	})
 

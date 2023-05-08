@@ -5,6 +5,7 @@ type RedisConfig struct {
 	Port            string `yaml:"port" env:"REDIS_PORT" env-description:"Database port"`
 	ReadTimeout     int    `yaml:"readTimeout"`
 	PollingInterval int    `yaml:"pollingInterval"`
+	DB              int    `yaml:"db"`
 }
 
 type WebhookConfig struct {
