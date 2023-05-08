@@ -7,7 +7,7 @@ const (
 	ZkOrchProcessed    = "processed"
 
 	JavalToolOptions = "JAVA_TOOL_OPTIONS"
-	OtelArgument     = " -javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.traces.exporter=jaeger -Dotel.exporter.jaeger.endpoint=simplest-collector.observability.svc.cluster.local:14250"
+	OtelArgument     = " -javaagent:/opt/zerok/opentelemetry-javaagent.jar -Dotel.javaagent.extensions=/opt/zerok/zk-otel-extension.jar -Dotel.traces.exporter=jaeger -Dotel.exporter.jaeger.endpoint=http://simplest-collector.observability.svc.cluster.local:14250"
 
 	ZkInjectionKey   = "zk-injection"
 	ZkInjectionValue = "enabled"

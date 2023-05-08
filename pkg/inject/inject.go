@@ -107,7 +107,7 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 func (h *Injector) getPatches(pod *corev1.Pod) []map[string]interface{} {
 	patches := make([]map[string]interface{}, 0)
 
-	//These set of patches will injeect the init container.
+	//These set of patches will inject the init container.
 	patches = append(patches, h.getInitContainerPatches(pod)...)
 
 	//This patch for adding volume mount. This allows the main container access to otel agent.
@@ -162,16 +162,22 @@ func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex
 	var patch map[string]interface{}
 	if envIndex == -1 {
 		patch = map[string]interface{}{
-			"op":    "add",
-			"path":  fmt.Sprintf("/spec/template/spec/containers/%v/env/-", containerIndex),
-			"value": map[string]interface{}{"name": common.JavalToolOptions, "value": common.OtelArgument},
+			"op":   "add",
+			"path": fmt.Sprintf("/spec/containers/%v/env/-", containerIndex),
+			"value": corev1.EnvVar{
+				Name:  common.JavalToolOptions,
+				Value: common.OtelArgument,
+			},
 		}
 
 	} else {
 		patch = map[string]interface{}{
-			"op":    "replace",
-			"path":  fmt.Sprintf("/spec/template/spec/containers/%v/env/%v/value", containerIndex, envIndex),
-			"value": container.Env[envIndex].Value + common.OtelArgument,
+			"op":   "replace",
+			"path": fmt.Sprintf("/spec/containers/%v/env/%v", containerIndex, envIndex),
+			"value": corev1.EnvVar{
+				Name:  common.JavalToolOptions,
+				Value: container.Env[envIndex].Value + common.OtelArgument,
+			},
 		}
 	}
 	return patch
