@@ -111,7 +111,7 @@ func (h *Injector) getPatches(pod *corev1.Pod) []map[string]interface{} {
 	patches = append(patches, h.getInitContainerPatches(pod)...)
 
 	//This patch for adding volume mount. This allows the main container access to otel agent.
-	patches = append(patches, h.getVolumePatch()...)
+	patches = append(patches, h.getVolumePatch())
 
 	//These patchs orchestraces the container based on language.
 	containerPatches := h.getContainerPatches(pod)
@@ -139,7 +139,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) []map[string]interface{}
 		switch language {
 		case common.JavaProgrammingLanguage:
 			javaToolsPatch := modifyJavaToolsEnvVariablePatch(container, index)
-			patches = append(patches, javaToolsPatch)
+			patches = append(patches, javaToolsPatch...)
 			orchLabelPatch := getZerokLabelPatch(common.ZkOrchOrchestrated)
 			patches = append(patches, orchLabelPatch)
 		default:
@@ -156,9 +156,20 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) []map[string]interface{}
 	return patches
 }
 
-func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex int) map[string]interface{} {
+func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex int) []map[string]interface{} {
 	envVars := container.Env
-	envIndex := utils.GetIndexOfEnv(envVars, common.JavalToolOptions)
+	envIndex := -1
+	patches := []map[string]interface{}{}
+	if len(envVars) == 0 {
+		envInitialize := map[string]interface{}{
+			"op":    "add",
+			"path":  fmt.Sprintf("/spec/containers/%v/env", containerIndex),
+			"value": []corev1.EnvVar{},
+		}
+		patches = append(patches, envInitialize)
+	} else {
+		envIndex = utils.GetIndexOfEnv(envVars, common.JavalToolOptions)
+	}
 	var patch map[string]interface{}
 	if envIndex == -1 {
 		patch = map[string]interface{}{
@@ -180,7 +191,8 @@ func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex
 			},
 		}
 	}
-	return patch
+	patches = append(patches, patch)
+	return patches
 }
 
 func getZerokLabelPatch(value string) map[string]interface{} {
@@ -204,9 +216,7 @@ func (*Injector) getVolumeMount(i int) map[string]interface{} {
 	return addVolumeMount
 }
 
-func (h *Injector) getVolumePatch() []map[string]interface{} {
-	p := make([]map[string]interface{}, 0)
-
+func (h *Injector) getVolumePatch() map[string]interface{} {
 	addVolume := map[string]interface{}{
 		"op":   "add",
 		"path": "/spec/volumes/-",
@@ -217,10 +227,7 @@ func (h *Injector) getVolumePatch() []map[string]interface{} {
 			},
 		},
 	}
-
-	p = append(p, addVolume)
-
-	return p
+	return addVolume
 }
 
 func (h *Injector) getInitContainerPatches(pod *corev1.Pod) []map[string]interface{} {
