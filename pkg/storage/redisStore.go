@@ -42,7 +42,7 @@ func (zkRedis *ImageStore) testRedisConn() {
 func GetNewImageStore(redisConfig config.RedisConfig) *ImageStore {
 	readTimeout := time.Duration(redisConfig.ReadTimeout) * time.Second
 	addr := fmt.Sprint(redisConfig.Host, ":", redisConfig.Port)
-	fmt.Printf("Address for redis is %v.\n",addr)
+	fmt.Printf("Address for redis is %v.\n", addr)
 	_redisClient := redis.NewClient(&redis.Options{
 		Addr:        addr,
 		Password:    "",
@@ -73,8 +73,6 @@ func (zkRedis *ImageStore) LoadAllData(imageRuntimeMap *sync.Map) error {
 			return err
 		}
 
-		fmt.Printf("Len of data is %v.\n", len(data))
-
 		for i := 0; i < len(data); i += 2 {
 			key := data[i]
 			value := data[i+1]
@@ -84,7 +82,6 @@ func (zkRedis *ImageStore) LoadAllData(imageRuntimeMap *sync.Map) error {
 				//TODO: Handle error
 				fmt.Println(err)
 			}
-			fmt.Printf("Saving value %v for key %v\n", key, value)
 			imageRuntimeMap.Store(key, serializedValue)
 		}
 
