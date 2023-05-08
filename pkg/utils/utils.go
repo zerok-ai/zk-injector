@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"zerok-injector/pkg/common"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func FindString(array []string, element string) int {
@@ -46,4 +48,13 @@ func ToJsonString(iInstance interface{}) *string {
 	}
 	iString := string(bytes)
 	return &iString
+}
+
+func GetIndexOfEnv(envVars []corev1.EnvVar, targetEnv string) int {
+	for index, envVar := range envVars {
+		if envVar.Name == targetEnv {
+			return index
+		}
+	}
+	return -1
 }

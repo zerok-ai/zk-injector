@@ -9,6 +9,7 @@ import (
 
 	common "zerok-injector/pkg/common"
 	"zerok-injector/pkg/storage"
+	"zerok-injector/pkg/utils"
 
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,6 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("unmarshaling request failed with %s", err)
 	}
 
-	//var err error
 	var pod *corev1.Pod
 
 	responseBody := []byte{}
@@ -76,14 +76,10 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 		patchType := v1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 
-		patches, err := h.getPatches(pod)
-		if err != nil {
-			fmt.Printf("Error caught while getting the patches %v.\n", err)
-			return emptyResponse, err
-		}
-		admissionResponse.Patch, err = json.Marshal(patches)
+		patches := h.getPatches(pod)
 
-		fmt.Printf("The patches are %v\n", patches)
+		var err error
+		admissionResponse.Patch, err = json.Marshal(patches)
 
 		if err != nil {
 			fmt.Printf("Error caught while marshalling the patches %v.\n", err)
@@ -108,68 +104,86 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 }
 
 // This method returns all the patches to be applied on the pod.
-func (h *Injector) getPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
+func (h *Injector) getPatches(pod *corev1.Pod) []map[string]interface{} {
 	patches := make([]map[string]interface{}, 0)
+
+	//These set of patches will injeect the init container.
 	patches = append(patches, h.getInitContainerPatches(pod)...)
+
+	//This patch for adding volume mount. This allows the main container access to otel agent.
 	patches = append(patches, h.getVolumePatch()...)
-	containerPatches, err := h.getContainerPatches(pod)
-	if err != nil {
-		return make([]map[string]interface{}, 0), err
-	}
+
+	//These patchs orchestraces the container based on language.
+	containerPatches := h.getContainerPatches(pod)
 	patches = append(patches, containerPatches...)
+
 	fmt.Printf("The patches created are %v.\n", patches)
-	return patches, nil
+
+	return patches
 }
 
-func (h *Injector) getContainerPatches(pod *corev1.Pod) ([]map[string]interface{}, error) {
+func (h *Injector) getContainerPatches(pod *corev1.Pod) []map[string]interface{} {
 
 	patches := make([]map[string]interface{}, 0)
 
 	containers := pod.Spec.Containers
 
-	for i := range containers {
+	for index := range containers {
 
-		container := &pod.Spec.Containers[i]
+		container := &pod.Spec.Containers[index]
 
-		podCmd, runtime, err := h.getCmdAndArgsForContainer(container, pod, h.ImageRuntimeHandler)
+		language := h.ImageRuntimeHandler.GetContainerLanguage(container, pod)
 
-		if err != nil {
-			fmt.Printf("Error caught while getting command %v for container %v.\n", err, i)
-			continue
+		fmt.Printf("Found language %v for container %v\n", language, container.Name)
+
+		switch language {
+		case common.JavaProgrammingLanguage:
+			javaToolsPatch := modifyJavaToolsEnvVariablePatch(container, index)
+			patches = append(patches, javaToolsPatch)
+			orchLabelPatch := getZerokLabelPatch(common.ZkOrchOrchestrated)
+			patches = append(patches, orchLabelPatch)
+		default:
+			orchLabelPatch := getZerokLabelPatch(common.ZkOrchProcessed)
+			patches = append(patches, orchLabelPatch)
 		}
 
-		transformedCommand, err := transformCommandAndArgsK8s(podCmd, runtime)
-
-		fmt.Println("Transformed command ", transformedCommand)
-
-		if err == nil {
-			addCommand := map[string]interface{}{
-				"op":    "add",
-				"path":  "/spec/containers/" + strconv.Itoa(i) + "/command",
-				"value": transformedCommand,
-			}
-
-			fmt.Println("Add command ", addCommand)
-
-			patches = append(patches, addCommand)
-
-			labelPod := map[string]interface{}{
-				"op":    "replace",
-				"path":  common.ZkOrchPath,
-				"value": common.ZkOrchOrchestrated,
-			}
-
-			patches = append(patches, labelPod)
-
-		}
-
-		addVolumeMount := h.getVolumeMount(i)
+		addVolumeMount := h.getVolumeMount(index)
 
 		patches = append(patches, addVolumeMount)
 
 	}
 
-	return patches, nil
+	return patches
+}
+
+func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex int) map[string]interface{} {
+	envVars := container.Env
+	envIndex := utils.GetIndexOfEnv(envVars, common.JavalToolOptions)
+	var patch map[string]interface{}
+	if envIndex == -1 {
+		patch = map[string]interface{}{
+			"op":    "add",
+			"path":  fmt.Sprintf("/spec/template/spec/containers/%v/env/-", containerIndex),
+			"value": map[string]interface{}{"name": common.JavalToolOptions, "value": common.OtelArgument},
+		}
+
+	} else {
+		patch = map[string]interface{}{
+			"op":    "replace",
+			"path":  fmt.Sprintf("/spec/template/spec/containers/%v/env/%v/value", containerIndex, envIndex),
+			"value": container.Env[envIndex].Value + common.OtelArgument,
+		}
+	}
+	return patch
+}
+
+func getZerokLabelPatch(value string) map[string]interface{} {
+	labelPod := map[string]interface{}{
+		"op":    "replace",
+		"path":  common.ZkOrchPath,
+		"value": value,
+	}
+	return labelPod
 }
 
 func (*Injector) getVolumeMount(i int) map[string]interface{} {
@@ -182,30 +196,6 @@ func (*Injector) getVolumeMount(i int) map[string]interface{} {
 		},
 	}
 	return addVolumeMount
-}
-
-func (h *Injector) getCmdAndArgsForContainer(container *corev1.Container, pod *corev1.Pod, imageHandler *storage.ImageRuntimeHandler) (string, common.ProgrammingLanguage, error) {
-	if container == nil {
-		fmt.Println("Container is nil.")
-		return "", common.UknownLanguage, fmt.Errorf("container is nil")
-	}
-
-	//var err error
-
-	// command, runtime := imageHandler.GetContainerCommand(container, pod)
-	// if command == "" {
-	// 	return "", common.UknownLanguage, fmt.Errorf("command not found for image: %v", container.Image)
-	// }
-
-	// fmt.Println("Container command ", command)
-	// if err != nil {
-	// 	fmt.Println("Error while getting patch command for image: ", container.Image)
-	// 	return "", common.UknownLanguage, fmt.Errorf("error while getting patch command for image: %v, erro %v", container.Image, err)
-	// }
-	// return command, runtime, nil
-
-	//TODO: Adding this return temporarily for the program to compile. Change the injection code to add annotation.
-	return "", "", nil
 }
 
 func (h *Injector) getVolumePatch() []map[string]interface{} {
