@@ -18,20 +18,34 @@ type ImageRuntimeHandler struct {
 	ImageStore        ImageStore
 }
 
-func (h *ImageRuntimeHandler) syncDataFromRedis(redisConfig config.RedisConfig) {
+func (h *ImageRuntimeHandler) pollDataFromRedis(redisConfig config.RedisConfig) {
+	//Sync first time on pod start
+	h.syncDataFromRedis()
+	
+	//Creating a timer for periodic sync
 	var duration = time.Duration(redisConfig.PollingInterval) * time.Second
 	ticker := time.NewTicker(duration)
 	for range ticker.C {
 		fmt.Println("Sync triggered.")
-		versionFromRedis, err := h.ImageStore.GetHashSetVersion()
-		if err != nil {
-			continue
-		}
-		if h.RuntimeMapVersion == nil || h.RuntimeMapVersion != versionFromRedis {
-			h.RuntimeMapVersion = versionFromRedis
-			h.ImageStore.LoadAllData(h.ImageRuntimeMap)
+		h.syncDataFromRedis()
+	}
+}
+
+func (h *ImageRuntimeHandler) syncDataFromRedis() error {
+	versionFromRedis, err := h.ImageStore.GetHashSetVersion()
+	if err != nil {
+		fmt.Printf("Error caught while getting hash set version from redis %v.\n", err)
+		return err
+	}
+	if h.RuntimeMapVersion == nil || h.RuntimeMapVersion != versionFromRedis {
+		h.RuntimeMapVersion = versionFromRedis
+		err = h.ImageStore.LoadAllData(h.ImageRuntimeMap)
+		if err != nil { 
+			fmt.Printf("Error caught while loading all data from redis %v.\n",err)
+			return err
 		}
 	}
+	return nil 
 }
 
 func (h *ImageRuntimeHandler) Init(redisConfig config.RedisConfig) {
@@ -40,7 +54,7 @@ func (h *ImageRuntimeHandler) Init(redisConfig config.RedisConfig) {
 
 	//init ImageStore
 	h.ImageStore = *GetNewImageStore(redisConfig)
-	go h.syncDataFromRedis(redisConfig)
+	go h.pollDataFromRedis(redisConfig)
 }
 
 func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.ContainerRuntime {
@@ -59,6 +73,7 @@ func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.Contain
 
 func (h *ImageRuntimeHandler) GetContainerLanguage(container *corev1.Container, pod *corev1.Pod) common.ProgrammingLanguage {
 	imageId := container.Image
+	fmt.Printf("Image is %v.\n", imageId)
 	runtime := h.getRuntimeForImage(imageId)
 	if runtime == nil {
 		return common.UknownLanguage
