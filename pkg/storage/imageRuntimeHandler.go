@@ -14,14 +14,14 @@ import (
 
 type ImageRuntimeHandler struct {
 	ImageRuntimeMap   *sync.Map
-	RuntimeMapVersion *string
+	RuntimeMapVersion int64
 	ImageStore        ImageStore
 }
 
 func (h *ImageRuntimeHandler) pollDataFromRedis(redisConfig config.RedisConfig) {
 	//Sync first time on pod start
 	h.syncDataFromRedis()
-	
+
 	//Creating a timer for periodic sync
 	var duration = time.Duration(redisConfig.PollingInterval) * time.Second
 	ticker := time.NewTicker(duration)
@@ -37,7 +37,7 @@ func (h *ImageRuntimeHandler) syncDataFromRedis() error {
 		fmt.Printf("Error caught while getting hash set version from redis %v.\n", err)
 		return err
 	}
-	if h.RuntimeMapVersion == nil || h.RuntimeMapVersion != versionFromRedis {
+	if h.RuntimeMapVersion == -1 || h.RuntimeMapVersion != versionFromRedis {
 		h.RuntimeMapVersion = versionFromRedis
 		err = h.ImageStore.LoadAllData(h.ImageRuntimeMap)
 		if err != nil {
@@ -49,11 +49,10 @@ func (h *ImageRuntimeHandler) syncDataFromRedis() error {
 }
 
 func (h *ImageRuntimeHandler) Init(redisConfig config.RedisConfig) {
-	//	TODO
-	//  2. run async process to check whether all the expected pods have code injected
-
 	//init ImageStore
 	h.ImageStore = *GetNewImageStore(redisConfig)
+	h.RuntimeMapVersion = -1
+	h.ImageRuntimeMap = &sync.Map{}
 	go h.pollDataFromRedis(redisConfig)
 }
 

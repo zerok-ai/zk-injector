@@ -21,11 +21,11 @@ type ImageStore struct {
 	hashSetName string
 }
 
-func (zkRedis *ImageStore) GetHashSetVersion() (*string, error) {
-	data, err := zkRedis.GetString(hashSetVersionKey)
+func (zkRedis *ImageStore) GetHashSetVersion() (int64, error) {
+	data, err := zkRedis.redisClient.Get(hashSetVersionKey).Int64()
 	if err != nil {
 		fmt.Printf("Error caught while getting hash set version from redis %v.\n ", err)
-		return nil, err
+		return -1, err
 	}
 	return data, nil
 }

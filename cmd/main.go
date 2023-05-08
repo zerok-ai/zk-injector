@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 
 	"github.com/ilyakaznacheev/cleanenv"
 
@@ -37,7 +36,7 @@ func main() {
 		log.Println(err)
 	}
 
-	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: &sync.Map{}}
+	runtimeMap := &storage.ImageRuntimeHandler{}
 	runtimeMap.Init(cfg.Redis)
 
 	app := newApp()
