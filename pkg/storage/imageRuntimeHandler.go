@@ -40,12 +40,12 @@ func (h *ImageRuntimeHandler) syncDataFromRedis() error {
 	if h.RuntimeMapVersion == nil || h.RuntimeMapVersion != versionFromRedis {
 		h.RuntimeMapVersion = versionFromRedis
 		err = h.ImageStore.LoadAllData(h.ImageRuntimeMap)
-		if err != nil { 
-			fmt.Printf("Error caught while loading all data from redis %v.\n",err)
+		if err != nil {
+			fmt.Printf("Error caught while loading all data from redis %v.\n", err)
 			return err
 		}
 	}
-	return nil 
+	return nil
 }
 
 func (h *ImageRuntimeHandler) Init(redisConfig config.RedisConfig) {

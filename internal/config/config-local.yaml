@@ -16,4 +16,4 @@ logs:
   color: true
   level: DEBUG
 
-debug: true
+local: true

@@ -18,14 +18,13 @@ import (
 	"github.com/kataras/iris/v12"
 )
 
-//TODO:
-// Implement new architecture flow.
-// Check todos in image map handler file.
-// Add a script for stage and prod as well.
-// What if the processes change in a pod based on args to a container?
-// Add service name from workload to otel agent.
-// Integrate a logger in the project.
-
+// TODO:
+// Don't use same redis client across threads in golang? -- why?
+// Implement restart of workload.
+// Add zklogger in the project.
+// Add comments wherever required.
+// Break down methods for testing convenience.
+// Merge injector with operator.
 func main() {
 
 	var cfg config.ZkInjectorConfig
@@ -41,9 +40,6 @@ func main() {
 	runtimeMap := &storage.ImageRuntimeHandler{ImageRuntimeMap: &sync.Map{}}
 	runtimeMap.Init(cfg.Redis)
 
-	// start data collector
-	//go server.StartServer(runtimeMap)
-
 	app := newApp()
 
 	config := iris.WithConfiguration(iris.Configuration{
@@ -51,22 +47,23 @@ func main() {
 		LogLevel:              "debug",
 	})
 
-	if cfg.Debug {
+	if cfg.Local {
 		server.StartDebugWebHookServer(app, cfg, runtimeMap, config)
 	} else {
 		// initialize certificates
 		caPEM, cert, key, err := cert.InitializeKeysAndCertificates(cfg.Webhook)
 		if err != nil {
-			fmt.Println(err)
-			panic(err)
+			msg := fmt.Sprintf("Failed to create keys and certificates for webhook %v. Stopping initialization of the pod.\n", err)
+			fmt.Println(msg)
+			return
 		}
 
 		// start mutating webhook
 		err = utils.CreateOrUpdateMutatingWebhookConfiguration(caPEM, cfg.Webhook)
 		if err != nil {
-			msg := fmt.Sprintf("Failed to create or update the mutating webhook configuration: %v\n", err)
+			msg := fmt.Sprintf("Failed to create or update the mutating webhook configuration: %v. Stopping initialization of the pod.\n", err)
 			fmt.Println(msg)
-			panic(msg)
+			return
 		}
 
 		// start webhook server
@@ -81,8 +78,7 @@ func newApp() *iris.Application {
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 
 		if ctx.Method() == iris.MethodOptions {
-			ctx.Header("Access-Control-Methods",
-				"POST, PUT, PATCH, DELETE")
+			ctx.Header("Access-Control-Methods", "POST")
 
 			ctx.Header("Access-Control-Allow-Headers",
 				"Access-Control-Allow-Origin,Content-Type")

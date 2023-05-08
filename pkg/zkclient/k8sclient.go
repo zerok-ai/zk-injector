@@ -6,12 +6,17 @@ import (
 	"fmt"
 	"time"
 
+	"os"
+
+	"zerok-injector/pkg/common"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type patchStringValue struct {
@@ -78,7 +83,7 @@ func LabelPod(pod *corev1.Pod, path string, value string) error {
 	return nil
 }
 
-func getPodsWithSelector(selector string) (*corev1.PodList, error) {
+func getPodsWithSelector(selector string, namespace string) (*corev1.PodList, error) {
 	clientset, err := GetK8sClient()
 	if err != nil {
 		return nil, err
@@ -86,7 +91,7 @@ func getPodsWithSelector(selector string) (*corev1.PodList, error) {
 	listOptions := metav1.ListOptions{
 		LabelSelector: selector,
 	}
-	pods, _ := clientset.CoreV1().Pods("").List(context.Background(), listOptions)
+	pods, _ := clientset.CoreV1().Pods(namespace).List(context.Background(), listOptions)
 	return pods, nil
 }
 
@@ -103,26 +108,65 @@ func GetPodsMatchingLabels(labelsMap map[string]string, namespace string) (*core
 	return pods, err
 }
 
-func GetPodsWithLabel(labelKey, labelValue string) (*corev1.PodList, error) {
-	pods, err := getPodsWithSelector(labelKey + "=" + labelValue)
+func GetPodsWithLabel(labelKey, labelValue, namespace string) (*corev1.PodList, error) {
+	pods, err := getPodsWithSelector(labelKey+"="+labelValue, namespace)
 	if err != nil {
 		return nil, err
 	}
 	return pods, nil
 }
 
-func GetPodsWithoutLabel(labelKey string) (*corev1.PodList, error) {
-	pods, err := getPodsWithSelector("!" + labelKey)
+func GetPodsWithoutLabel(labelKey string, namespace string) (*corev1.PodList, error) {
+	pods, err := getPodsWithSelector("!"+labelKey, namespace)
 	if err != nil {
+		fmt.Printf("Error while getting pods without label %v.\n", err)
 		return nil, err
 	}
 	return pods, nil
+}
+
+func GetAllNonOrchestratedPods() ([]corev1.Pod, error) {
+	allPodsList := []corev1.Pod{}
+	clientset, err := GetK8sClient()
+	if err != nil {
+		fmt.Printf(" Error while getting client.")
+		return nil, err
+	}
+	selector := common.ZkInjectionKey + "=" + common.ZkInjectionValue
+	listOptions := metav1.ListOptions{
+		LabelSelector: selector,
+	}
+	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), listOptions)
+	if err != nil {
+		fmt.Printf("Error caught while getting list of namespacese %v.\n", err)
+	}
+	for _, namespace := range namespaces.Items {
+		fmt.Printf("Checking for namespace %v.\n", namespace)
+		pods, err := GetNotOrchestratedPods(namespace.ObjectMeta.Name)
+		if err != nil {
+			err = fmt.Errorf("error getting non orchestrated pods from namespace %v", namespace)
+			return nil, err
+		}
+		allPodsList = append(allPodsList, pods.Items...)
+	}
+	return allPodsList, nil
+}
+
+func GetNotOrchestratedPods(namespace string) (*corev1.PodList, error) {
+	pods, err := GetPodsWithoutLabel(common.ZkOrchKey, namespace)
+	return pods, err
 }
 
 func GetK8sClient() (*kubernetes.Clientset, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, err
+		// If incluster config failes, reading from kubeconfig.
+		// However, this is not connecting to gcp clusters. Only working for kind now(probably minikube also).
+		kubeconfig := os.Getenv("KUBECONFIG")
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Kubernetes config: %v", err)
+		}
 	}
 	// creates the clientset
 	clientset, err := kubernetes.NewForConfig(config)

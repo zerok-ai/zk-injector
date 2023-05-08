@@ -19,5 +19,5 @@ type WebhookConfig struct {
 type ZkInjectorConfig struct {
 	Redis   RedisConfig   `yaml:"redis"`
 	Webhook WebhookConfig `yaml:"webhook"`
-	Debug   bool          `yaml:"debug"`
+	Local   bool          `yaml:"local"`
 }

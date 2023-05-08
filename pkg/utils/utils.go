@@ -2,8 +2,11 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"zerok-injector/pkg/common"
+
+	"zerok-injector/pkg/zkclient"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -57,4 +60,17 @@ func GetIndexOfEnv(envVars []corev1.EnvVar, targetEnv string) int {
 		}
 	}
 	return -1
+}
+
+func PrintAllNonOrchestratedPods() {
+	podlist, err := zkclient.GetAllNonOrchestratedPods()
+	fmt.Printf("Getting all pods.\n")
+
+	if err != nil {
+		fmt.Printf("Error %v.\n", err)
+	} else {
+		for _, pod := range podlist {
+			fmt.Printf("Pod with name %v.\n", pod.ObjectMeta.Name)
+		}
+	}
 }
