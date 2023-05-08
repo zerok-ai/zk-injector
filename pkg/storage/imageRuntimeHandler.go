@@ -37,7 +37,6 @@ func (h *ImageRuntimeHandler) syncDataFromRedis(redisConfig config.RedisConfig) 
 func (h *ImageRuntimeHandler) Init(redisConfig config.RedisConfig) {
 	//	TODO
 	//  2. run async process to check whether all the expected pods have code injected
-	//	2.1 Auto-restart pods with auto injection enabled
 
 	//init ImageStore
 	h.ImageStore = *GetNewImageStore(redisConfig)
@@ -58,7 +57,7 @@ func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.Contain
 	}
 }
 
-func (h *ImageRuntimeHandler) GetContainerCommand(container *corev1.Container, pod *corev1.Pod) common.ProgrammingLanguage {
+func (h *ImageRuntimeHandler) GetContainerLanguage(container *corev1.Container, pod *corev1.Pod) common.ProgrammingLanguage {
 	imageId := container.Image
 	runtime := h.getRuntimeForImage(imageId)
 	if runtime == nil {

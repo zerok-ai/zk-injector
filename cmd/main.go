@@ -19,9 +19,7 @@ import (
 )
 
 //TODO:
-// Integrate iris into the repo.
-// Get new architecture flow from Mudit and implement polling from redis.
-// Error handling in redis integration.
+// Implement new architecture flow.
 // Check todos in image map handler file.
 // Add a script for stage and prod as well.
 // What if the processes change in a pod based on args to a container?

@@ -68,6 +68,7 @@ func (zkRedis *ImageStore) LoadAllData(imageRuntimeMap *sync.Map) error {
 				//TODO: Handle error
 				fmt.Println(err)
 			}
+			fmt.Printf("Saving value %v for key %v\n", key, value)
 			imageRuntimeMap.Store(key, serializedValue)
 		}
 
