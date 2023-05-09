@@ -76,13 +76,16 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 		patchType := v1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 
+		//Creating the patches to be applied on the pod.
 		patches := h.getPatches(pod)
 
 		var err error
+		//Creating json patch to send in admission response.
 		admissionResponse.Patch, err = json.Marshal(patches)
 
 		if err != nil {
 			fmt.Printf("Error caught while marshalling the patches %v.\n", err)
+			//Sending empty response to let the pod creation happen without instrumentation.
 			return emptyResponse, err
 		}
 
@@ -94,6 +97,7 @@ func (h *Injector) Inject(body []byte) ([]byte, error) {
 
 		responseBody, err = json.Marshal(admissionReviewObj)
 		if err != nil {
+			//Sending empty response to let the pod creation happen without instrumentation.
 			return emptyResponse, err
 		}
 	}
@@ -137,8 +141,8 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) []map[string]interface{}
 		fmt.Printf("Found language %v for container %v\n", language, container.Name)
 
 		switch language {
-		//Adding env variable patch in case the prog language is java.
 		case common.JavaProgrammingLanguage:
+			//Adding env variable patch in case the prog language is java.
 			javaToolsPatch := modifyJavaToolsEnvVariablePatch(container, index)
 			patches = append(patches, javaToolsPatch...)
 			orchLabelPatch := getZerokLabelPatch(common.ZkOrchOrchestrated)
