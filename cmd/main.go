@@ -19,8 +19,6 @@ import (
 
 // TODO:
 // Add zklogger in the project.
-// Add comments wherever required.
-// Break down methods for testing convenience.
 // Merge injector with operator.
 func main() {
 
