@@ -137,6 +137,7 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) []map[string]interface{}
 		fmt.Printf("Found language %v for container %v\n", language, container.Name)
 
 		switch language {
+		//Adding env variable patch in case the prog language is java.
 		case common.JavaProgrammingLanguage:
 			javaToolsPatch := modifyJavaToolsEnvVariablePatch(container, index)
 			patches = append(patches, javaToolsPatch...)
@@ -160,6 +161,8 @@ func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex
 	envVars := container.Env
 	envIndex := -1
 	patches := []map[string]interface{}{}
+
+	//If there are no env variables in container, adding an empty array first.
 	if len(envVars) == 0 {
 		envInitialize := map[string]interface{}{
 			"op":    "add",
@@ -170,7 +173,9 @@ func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex
 	} else {
 		envIndex = utils.GetIndexOfEnv(envVars, common.JavalToolOptions)
 	}
+
 	var patch map[string]interface{}
+	//Scenario where java_tool_options is not present.
 	if envIndex == -1 {
 		patch = map[string]interface{}{
 			"op":   "add",
@@ -182,6 +187,7 @@ func modifyJavaToolsEnvVariablePatch(container *corev1.Container, containerIndex
 		}
 
 	} else {
+		//Scenario where java_tool_options is already present.
 		patch = map[string]interface{}{
 			"op":   "replace",
 			"path": fmt.Sprintf("/spec/containers/%v/env/%v", containerIndex, envIndex),
