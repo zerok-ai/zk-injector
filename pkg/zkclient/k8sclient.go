@@ -157,14 +157,29 @@ func GetAllNonOrchestratedPods() ([]corev1.Pod, error) {
 			err = fmt.Errorf("error getting non orchestrated pods from namespace %v", namespace)
 			return nil, err
 		}
-		allPodsList = append(allPodsList, pods.Items...)
+		allPodsList = append(allPodsList, pods...)
 	}
 	return allPodsList, nil
 }
 
-func GetNotOrchestratedPods(namespace string) (*corev1.PodList, error) {
+func GetNotOrchestratedPods(namespace string) ([]corev1.Pod, error) {
+	podList := []corev1.Pod{}
+
+	//Getting pods which does not have zk-status label.
 	pods, err := GetPodsWithoutLabel(common.ZkOrchKey, namespace)
-	return pods, err
+	if err != nil {
+		return podList, err
+	}
+	podList = append(podList, pods.Items...)
+
+	//Getting pods where zk-status is in process.
+	pods, err = GetPodsWithLabel(common.ZkOrchKey, common.ZkOrchInProcess, namespace)
+	if err != nil {
+		return podList, err
+	}
+	podList = append(podList, pods.Items...)
+
+	return podList, err
 }
 
 func GetK8sClient() (*kubernetes.Clientset, error) {

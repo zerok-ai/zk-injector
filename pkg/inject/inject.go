@@ -147,6 +147,10 @@ func (h *Injector) getContainerPatches(pod *corev1.Pod) []map[string]interface{}
 			patches = append(patches, javaToolsPatch...)
 			orchLabelPatch := getZerokLabelPatch(common.ZkOrchOrchestrated)
 			patches = append(patches, orchLabelPatch)
+		case common.NotYetProcessed:
+			//Setting zk-status as in-process since there is not runtime info in redis.
+			orchLabelPatch := getZerokLabelPatch(common.ZkOrchInProcess)
+			patches = append(patches, orchLabelPatch)
 		default:
 			orchLabelPatch := getZerokLabelPatch(common.ZkOrchProcessed)
 			patches = append(patches, orchLabelPatch)

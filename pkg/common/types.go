@@ -9,6 +9,7 @@ const (
 	DotNetProgrammingLanguage     ProgrammingLanguage = "dotnet"
 	JavascriptProgrammingLanguage ProgrammingLanguage = "javascript"
 	UknownLanguage                ProgrammingLanguage = "unknown"
+	NotYetProcessed               ProgrammingLanguage = "notprocessed"
 )
 
 type ContainerRuntime struct {

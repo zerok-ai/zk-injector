@@ -75,7 +75,7 @@ func (h *ImageRuntimeHandler) GetContainerLanguage(container *corev1.Container, 
 	fmt.Printf("Image is %v.\n", imageId)
 	runtime := h.getRuntimeForImage(imageId)
 	if runtime == nil {
-		return common.UknownLanguage
+		return common.NotYetProcessed
 	}
 	languages := runtime.Languages
 	if len(languages) > 0 {
