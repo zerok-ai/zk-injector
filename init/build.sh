@@ -1,2 +1,4 @@
-docker build . -t us-west1-docker.pkg.dev/zerok-dev/stage/init-container:test
-docker push us-west1-docker.pkg.dev/zerok-dev/stage/init-container:test
+scriptDir=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
+
+make -C ${scriptDir} docker-build 
+make -C ${scriptDir} docker-push
