@@ -20,6 +20,7 @@ import (
 // TODO:
 // Add zklogger in the project.
 // Merge injector with operator.
+// Unit testing.
 func main() {
 
 	var cfg config.ZkInjectorConfig
