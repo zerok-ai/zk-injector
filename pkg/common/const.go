@@ -12,4 +12,6 @@ const (
 
 	ZkInjectionKey   = "zk-injection"
 	ZkInjectionValue = "enabled"
+
+	ZkAutoRestartKey = "zk-auto-restart"
 )

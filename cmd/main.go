@@ -12,13 +12,13 @@ import (
 	"zerok-injector/pkg/cert"
 	"zerok-injector/pkg/server"
 	"zerok-injector/pkg/storage"
+	"zerok-injector/pkg/sync"
 	"zerok-injector/pkg/utils"
 
 	"github.com/kataras/iris/v12"
 )
 
 // TODO:
-// Expose an endpoint for restarting specific deployment or namespace.
 // Add zklogger in the project.
 // Merge injector with operator.
 // Unit testing.
@@ -36,6 +36,7 @@ func main() {
 
 	runtimeMap := &storage.ImageRuntimeHandler{}
 	runtimeMap.Init(cfg.Redis)
+	go sync.UpdateOrchestration(runtimeMap, cfg)
 
 	app := newApp()
 

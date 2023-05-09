@@ -30,15 +30,6 @@ func (zkRedis *ImageStore) GetHashSetVersion() (int64, error) {
 	return data, nil
 }
 
-func (zkRedis *ImageStore) testRedisConn() {
-	pong, err := zkRedis.redisClient.Ping().Result()
-	if err != nil {
-		fmt.Printf("Error sending PING command to Redis: %v", err)
-	}
-
-	fmt.Println("Redis PING response:", pong)
-}
-
 func GetNewImageStore(redisConfig config.RedisConfig) *ImageStore {
 	readTimeout := time.Duration(redisConfig.ReadTimeout) * time.Second
 	addr := fmt.Sprint(redisConfig.Host, ":", redisConfig.Port)
@@ -54,8 +45,6 @@ func GetNewImageStore(redisConfig config.RedisConfig) *ImageStore {
 		redisClient: _redisClient,
 		hashSetName: hashSetName,
 	}
-
-	imgRedis.testRedisConn()
 
 	return imgRedis
 }

@@ -3,7 +3,6 @@ package storage
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"zerok-injector/internal/config"
 	"zerok-injector/pkg/common"
@@ -18,20 +17,7 @@ type ImageRuntimeHandler struct {
 	ImageStore        ImageStore
 }
 
-func (h *ImageRuntimeHandler) pollDataFromRedis(redisConfig config.RedisConfig) {
-	//Sync first time on pod start
-	h.syncDataFromRedis()
-
-	//Creating a timer for periodic sync
-	var duration = time.Duration(redisConfig.PollingInterval) * time.Second
-	ticker := time.NewTicker(duration)
-	for range ticker.C {
-		fmt.Println("Sync triggered.")
-		h.syncDataFromRedis()
-	}
-}
-
-func (h *ImageRuntimeHandler) syncDataFromRedis() error {
+func (h *ImageRuntimeHandler) SyncDataFromRedis() error {
 	versionFromRedis, err := h.ImageStore.GetHashSetVersion()
 	if err != nil {
 		fmt.Printf("Error caught while getting hash set version from redis %v.\n", err)
@@ -53,7 +39,6 @@ func (h *ImageRuntimeHandler) Init(redisConfig config.RedisConfig) {
 	h.ImageStore = *GetNewImageStore(redisConfig)
 	h.RuntimeMapVersion = -1
 	h.ImageRuntimeMap = &sync.Map{}
-	go h.pollDataFromRedis(redisConfig)
 }
 
 func (h *ImageRuntimeHandler) getRuntimeForImage(imageID string) *common.ContainerRuntime {

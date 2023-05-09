@@ -129,9 +129,13 @@ func GetAllMarkedNamespaces() (*corev1.NamespaceList, error) {
 		return nil, err
 	}
 
-	selector := common.ZkInjectionKey + "=" + common.ZkInjectionValue
+	labelSelector := labels.Set{
+		common.ZkInjectionKey:   common.ZkInjectionValue,
+		common.ZkAutoRestartKey: "true",
+	}.AsSelector()
+
 	listOptions := metav1.ListOptions{
-		LabelSelector: selector,
+		LabelSelector: labelSelector.String(),
 	}
 	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), listOptions)
 	if err != nil {
