@@ -45,6 +45,7 @@ func main() {
 	})
 
 	if cfg.Local {
+		//Creating debug webhook server which accepts http requests for running on local machine.
 		server.StartDebugWebHookServer(app, cfg, runtimeMap, config)
 	} else {
 		// initialize certificates
