@@ -122,13 +122,13 @@ func GetPodsWithoutLabel(labelKey string, namespace string) (*corev1.PodList, er
 	return pods, nil
 }
 
-func GetAllNonOrchestratedPods() ([]corev1.Pod, error) {
-	allPodsList := []corev1.Pod{}
+func GetAllMarkedNamespaces() (*corev1.NamespaceList, error) {
 	clientset, err := GetK8sClient()
 	if err != nil {
 		fmt.Printf(" Error while getting client.")
 		return nil, err
 	}
+
 	selector := common.ZkInjectionKey + "=" + common.ZkInjectionValue
 	listOptions := metav1.ListOptions{
 		LabelSelector: selector,
@@ -136,7 +136,20 @@ func GetAllNonOrchestratedPods() ([]corev1.Pod, error) {
 	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), listOptions)
 	if err != nil {
 		fmt.Printf("Error caught while getting list of namespacese %v.\n", err)
+		return nil, err
 	}
+	return namespaces, nil
+}
+
+func GetAllNonOrchestratedPods() ([]corev1.Pod, error) {
+	allPodsList := []corev1.Pod{}
+	namespaces, err := GetAllMarkedNamespaces()
+
+	if err != nil {
+		fmt.Printf("Error caught while getting list of namespacese %v.\n", err)
+		return nil, err
+	}
+
 	for _, namespace := range namespaces.Items {
 		fmt.Printf("Checking for namespace %v.\n", namespace)
 		pods, err := GetNotOrchestratedPods(namespace.ObjectMeta.Name)

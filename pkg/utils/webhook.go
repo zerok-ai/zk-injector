@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"reflect"
 	"zerok-injector/internal/config"
+	"zerok-injector/pkg/zkclient"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 var (
@@ -21,17 +20,15 @@ var (
 
 func CreateOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, cfg config.WebhookConfig) error {
 
-	config, err := rest.InClusterConfig()
+	clientset, err := zkclient.GetK8sClient()
 	if err != nil {
 		return err
 	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
+
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()
 
 	fmt.Printf("Creating or updating the mutatingwebhookconfiguration\n")
+
 	ignore := admissionregistrationv1.Ignore
 	sideEffect := admissionregistrationv1.SideEffectClassNone
 	mutatingWebhookConfig := createMutatingWebhook(sideEffect, caPEM, cfg.Service, cfg.Namespace, ignore)
