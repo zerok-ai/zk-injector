@@ -18,8 +18,6 @@ import (
 )
 
 // TODO:
-// Don't use same redis client across threads in golang? -- why?
-// Implement restart of workload.
 // Add zklogger in the project.
 // Add comments wherever required.
 // Break down methods for testing convenience.

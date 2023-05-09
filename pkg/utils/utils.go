@@ -35,7 +35,6 @@ func FromJsonString(data string) (*common.ContainerRuntime, error) {
 	var runtimeDetails common.ContainerRuntime
 	err := json.Unmarshal([]byte(data), &runtimeDetails)
 	if err != nil {
-		//TODO: Is log needed here?
 		return nil, err
 	}
 	return &runtimeDetails, nil

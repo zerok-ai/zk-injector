@@ -32,7 +32,6 @@ func RestartDeployment(namespace string, deployment string) error {
 	}
 	deploymentsClient := k8sClient.AppsV1().Deployments(namespace)
 	data := fmt.Sprintf(`{"spec": {"template": {"metadata": {"annotations": {"zk-operator/restartedAt": "%s"}}}}}`, time.Now().Format("20060102150405"))
-	//TODO: Do we need to add any filter based on label for getting the deployments? Something about prev orchestration status.
 	_, err = deploymentsClient.Patch(context.TODO(), deployment, types.StrategicMergePatchType, []byte(data), metav1.PatchOptions{})
 	if err != nil {
 		fmt.Printf("Error caught while restarting deployment %v.\n", err)
@@ -41,7 +40,6 @@ func RestartDeployment(namespace string, deployment string) error {
 	return nil
 }
 
-// TODO: Confirm this with shivam.
 func RestartAllDeplomentsInNamespace(namespace string) error {
 	k8sClient, err := GetK8sClient()
 	if err != nil {
@@ -58,7 +56,6 @@ func RestartAllDeplomentsInNamespace(namespace string) error {
 		RestartDeployment(namespace, deployment.ObjectMeta.Name)
 	}
 	return nil
-	//TODO: Do we also need to restart other workloads like statefulsets?
 }
 
 func LabelPod(pod *corev1.Pod, path string, value string) error {

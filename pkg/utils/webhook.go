@@ -62,7 +62,6 @@ func CreateOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, cfg config.
 }
 
 func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, caPEM *bytes.Buffer, webhookService string, webhookNamespace string, ignore admissionregistrationv1.FailurePolicyType) *admissionregistrationv1.MutatingWebhookConfiguration {
-	timeOut := int32(30)
 	mutatingWebhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: webhookName,
@@ -71,7 +70,6 @@ func createMutatingWebhook(sideEffect admissionregistrationv1.SideEffectClass, c
 			Name:                    "zk-webhook.zerok.ai",
 			AdmissionReviewVersions: []string{"v1"},
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          &timeOut,
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
 				CABundle: caPEM.Bytes(),
 				Service: &admissionregistrationv1.ServiceReference{
