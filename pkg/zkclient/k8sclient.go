@@ -145,6 +145,37 @@ func GetAllMarkedNamespaces() (*corev1.NamespaceList, error) {
 	return namespaces, nil
 }
 
+func GetDeploymentForPods(pod *corev1.Pod) (string, error) {
+	ownerReferences := pod.GetOwnerReferences()
+	namespace := pod.ObjectMeta.Namespace
+	var deploymentName string
+
+	clientset, err := GetK8sClient()
+	if err != nil {
+		return "", err
+	}
+
+	for _, ownerRef := range ownerReferences {
+		if ownerRef.Kind == "ReplicaSet" {
+			replicaSetName := ownerRef.Name
+			replicaSet, err := clientset.AppsV1().ReplicaSets(namespace).Get(context.TODO(), replicaSetName, metav1.GetOptions{})
+			if err != nil {
+				return "", err
+			}
+
+			ownerReferences := replicaSet.GetOwnerReferences()
+			for _, ownerRef := range ownerReferences {
+				if ownerRef.Kind == "Deployment" {
+					deploymentName = ownerRef.Name
+					break
+				}
+			}
+			break
+		}
+	}
+	return deploymentName, nil
+}
+
 func GetAllNonOrchestratedPods() ([]corev1.Pod, error) {
 	allPodsList := []corev1.Pod{}
 	namespaces, err := GetAllMarkedNamespaces()
