@@ -19,6 +19,8 @@ import (
 )
 
 // TODO:
+// Complete TODO in sync.go file.
+// Create an interface for store package and limit interaction to the interface methods.
 // Add zklogger in the project.
 // Merge injector with operator.
 // Unit testing.
