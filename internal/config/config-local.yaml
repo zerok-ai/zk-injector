@@ -12,6 +12,10 @@ webhook:
   path: /zk-injector
   port: 8443
 
+zkcloud:
+  restartPath: /restart
+  port: 8442
+
 logs:
   color: true
   level: DEBUG

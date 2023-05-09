@@ -16,7 +16,3 @@ type ContainerRuntime struct {
 	ImageID   string   `json:"imageId"`
 	Languages []string `json:"language"`
 }
-
-type RuntimeSyncRequest struct {
-	RuntimeDetails []ContainerRuntime `json:"details"`
-}

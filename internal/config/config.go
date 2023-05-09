@@ -16,8 +16,14 @@ type WebhookConfig struct {
 	Port      string `yaml:"port"`
 }
 
+type ZkCloudConfig struct {
+	RestartPath string `yaml:"restartPath"`
+	Port        string `yaml:"port"`
+}
+
 type ZkInjectorConfig struct {
 	Redis   RedisConfig   `yaml:"redis"`
 	Webhook WebhookConfig `yaml:"webhook"`
 	Local   bool          `yaml:"local"`
+	ZkCloud ZkCloudConfig `yaml:"zkcloud"`
 }

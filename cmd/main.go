@@ -18,6 +18,7 @@ import (
 )
 
 // TODO:
+// Expose an endpoint for restarting specific deployment or namespace.
 // Add zklogger in the project.
 // Merge injector with operator.
 // Unit testing.
@@ -38,14 +39,16 @@ func main() {
 
 	app := newApp()
 
-	config := iris.WithConfiguration(iris.Configuration{
+	irisConfig := iris.WithConfiguration(iris.Configuration{
 		DisablePathCorrection: true,
 		LogLevel:              "debug",
 	})
 
+	go server.StartZkCloudServer(newApp(), cfg, irisConfig)
+
 	if cfg.Local {
 		//Creating debug webhook server which accepts http requests for running on local machine.
-		server.StartDebugWebHookServer(app, cfg, runtimeMap, config)
+		server.StartDebugWebHookServer(app, cfg, runtimeMap, irisConfig)
 	} else {
 		// initialize certificates
 		caPEM, cert, key, err := cert.InitializeKeysAndCertificates(cfg.Webhook)
@@ -64,7 +67,7 @@ func main() {
 		}
 
 		// start webhook server
-		server.StartWebHookServer(app, cfg, cert, key, runtimeMap, config)
+		server.StartWebHookServer(app, cfg, cert, key, runtimeMap, irisConfig)
 	}
 }
 

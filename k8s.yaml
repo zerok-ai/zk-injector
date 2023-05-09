@@ -18,9 +18,9 @@ spec:
     - port: 443
       targetPort: 8443
       name: webhook
-    - port: 8444
-      targetPort: 8444
-      name: sync
+    - port: 8442
+      targetPort: 8442
+      name: zkcloud
   selector:
     app: zerok-injector
 

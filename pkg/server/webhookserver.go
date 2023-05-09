@@ -12,17 +12,17 @@ import (
 	"github.com/kataras/iris/v12"
 )
 
-type HttpApiHandler struct {
+type WebhookRequestHandler struct {
 	injector *inject.Injector
 }
 
-func (h *HttpApiHandler) ServeHTTP(ctx iris.Context) {
+func (h *WebhookRequestHandler) ServeHTTP(ctx iris.Context) {
 	body, err := io.ReadAll(ctx.Request().Body)
 
 	fmt.Printf("Got a request from webhook")
 
 	if err != nil {
-		webhookErrorResponse(err, ctx)
+		webhookErrorResponse(err, ctx, "Failed to ready body of webhook request.")
 		return
 	}
 
@@ -37,13 +37,13 @@ func (h *HttpApiHandler) ServeHTTP(ctx iris.Context) {
 	ctx.Write(response)
 }
 
-func webhookErrorResponse(err error, ctx iris.Context) {
-	log.Println(err)
+func webhookErrorResponse(err error, ctx iris.Context, message string) {
+	log.Printf("%v with error %v.\n", message, err)
 	ctx.StatusCode(iris.StatusInternalServerError)
 }
 
 func handleRoutes(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap *storage.ImageRuntimeHandler) {
-	injectHandler := &HttpApiHandler{
+	injectHandler := &WebhookRequestHandler{
 		injector: &inject.Injector{ImageRuntimeHandler: runtimeMap},
 	}
 	app.Post(cfg.Webhook.Path, injectHandler.ServeHTTP)
@@ -54,7 +54,7 @@ func StartWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, cert
 	app.Run(iris.TLS(":"+cfg.Webhook.Port, cert.String(), key.String()), config)
 }
 
-func StartDebugWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap *storage.ImageRuntimeHandler, config iris.Configurator) {
+func StartDebugWebHookServer(app *iris.Application, cfg config.ZkInjectorConfig, runtimeMap *storage.ImageRuntimeHandler, irisConfig iris.Configurator) {
 	handleRoutes(app, cfg, runtimeMap)
-	app.Run(iris.Addr(":"+cfg.Webhook.Port), config)
+	app.Run(iris.Addr(":"+cfg.Webhook.Port), irisConfig)
 }
