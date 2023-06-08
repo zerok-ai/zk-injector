@@ -1,7 +1,7 @@
 NAME = zerok-injector
 IMAGE_PREFIX = us-west1-docker.pkg.dev/zerok-dev/stage
 IMAGE_NAME = zerok-injector
-IMAGE_VERSION = 0.0.1
+IMAGE_VERSION = 0.0.3
 
 export GO111MODULE=on
 
